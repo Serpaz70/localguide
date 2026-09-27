@@ -4356,7 +4356,9 @@
      ============================================================ */
   const RICERCA = {
     testo: '',       // quello che l'utente ha scritto in "Dove / cosa"
-    luogo: null,     // luogo risolto: { nome, lat, lng, bbox }
+    luogo: null,     // se il testo è un luogo: { nome, nomeBreve, lat, lng, bbox, punteggio }
+    testoRisolto: '',// testo per cui si è già deciso "luogo" o "parole chiave"
+    inAttesa: false, // sto chiedendo a Photon se il testo è un luogo
     cat: 'all',
     data: '',
     persone: 0
@@ -4526,9 +4528,11 @@
   }
 
   // Init mappa quando DOM è pronto
+  // Se la mappa non parte (Leaflet non caricato, rete lenta) le esperienze
+  // e la ricerca devono funzionare lo stesso.
   document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    window.leafletMap = leafletMap;
+    try { initMap(); window.leafletMap = leafletMap; }
+    catch (e) { console.warn('Mappa non disponibile:', e); }
     if (window.caricaEsperienze) window.caricaEsperienze();
   });
 
@@ -5273,7 +5277,7 @@ const coordDi = e => (e.lat != null && e.lng != null)
 // Un'esperienza sta "nel" luogo cercato? Regioni e città grandi hanno un
 // riquadro (bbox); per i punti singoli usiamo un raggio di 20 km.
 function dentroLuogo(c, luogo) {
-  if (!c || !luogo) return false;
+  if (!c || !luogo || luogo.lat == null) return false;
   if (luogo.bbox) {
     const [s, w, n, e] = luogo.bbox;
     const m = 0.05;   // ~5 km di margine: le frazioni appena fuori confine contano
@@ -5282,13 +5286,28 @@ function dentroLuogo(c, luogo) {
   return distanzaKm(c, [luogo.lat, luogo.lng]) <= 20;
 }
 
-function corrispondeTesto(e, t) {
-  if (!t) return true;
-  const campi = normalizza([e.citta, e.luogoCompleto, e.titolo, e.desc,
-    ETICHETTE_CAT[e.categoria], e.guida, e.incluso.join(' ')].join(' '));
-  // Tutte le parole cercate devono comparire (ordine libero)
-  return t.split(/\s+/).every(p => campi.includes(p));
+// Parole di un testo, normalizzate: "Emilia-Romagna" → ["emilia", "romagna"]
+const parole = s => normalizza(s).split(/[^a-z0-9]+/).filter(Boolean);
+
+// L'esperienza è in quel luogo "per nome"? Confronto su parti intere
+// ("Roma" ≠ "Emilia-Romagna"), su città e luogo completo salvato.
+function stessoLuogo(e, nomeNorm) {
+  if (!nomeNorm) return false;
+  const parti = [e.citta, ...String(e.luogoCompleto || '').split(',')].map(normalizza);
+  return parti.includes(nomeNorm);
 }
+
+// Ricerca per parole chiave: ogni parola cercata deve essere l'INIZIO di una
+// parola del testo ("pasta" trova "pastasciutta", "roma" non trova "aroma").
+function corrispondeParole(e, t) {
+  const cercate = parole(t);
+  if (!cercate.length) return true;
+  const testo = parole([e.citta, e.titolo, e.desc, ETICHETTE_CAT[e.categoria],
+    e.guida, e.incluso.join(' ')].join(' '));
+  return cercate.every(c => testo.some(w => w.startsWith(c)));
+}
+
+const RAGGIO_VICINE = 80;   // km: oltre, "vicino" non è più vicino
 
 function filtraCatalogo() {
   let voci = Object.entries(CATALOGO);
@@ -5297,18 +5316,37 @@ function filtraCatalogo() {
 
   const t = normalizza(RICERCA.testo);
   if (!t) return { voci, modo: 'tutte' };
+  if (RICERCA.inAttesa) return { voci: [], modo: 'attesa' };
 
   const L = RICERCA.luogo;
-  const trovate = voci.filter(([, e]) => corrispondeTesto(e, t) || dentroLuogo(coordDi(e), L));
-  if (trovate.length || !L) return { voci: trovate, modo: 'esatte' };
+  if (!L) {
+    // Non è un luogo: parole chiave su titolo, descrizione, categoria...
+    return { voci: voci.filter(([, e]) => corrispondeParole(e, t)), modo: 'parole' };
+  }
 
-  // Niente nel luogo cercato: proponiamo le più vicine entro 150 km
+  // È un luogo: conta SOLO dove si svolge l'esperienza, non cosa c'è scritto
+  const nomeL = normalizza(L.nomeBreve || L.nome);
+  // Regioni e province: il riquadro è un rettangolo e sconfina (quello della
+  // Toscana contiene Bologna). Se l'esperienza ha il luogo completo salvato
+  // ("Orbetello, Grosseto, Toscana, Italia") decide quello; il riquadro vale
+  // solo per le esperienze vecchie senza dettaglio.
+  const ampio = L.bbox && (L.bbox[2] - L.bbox[0] > 0.4 || L.bbox[3] - L.bbox[1] > 0.4);
+  const trovate = voci.filter(([, e]) => {
+    if (stessoLuogo(e, nomeL)) return true;
+    const dettagliato = String(e.luogoCompleto || '').split(',').length >= 3;
+    if (ampio && dettagliato) return false;
+    return dentroLuogo(coordDi(e), L);
+  });
+  if (trovate.length || L.lat == null) return { voci: trovate, modo: 'luogo' };
+
+  // Niente lì: le più vicine, entro un raggio ragionevole
   const centro = [L.lat, L.lng];
   const vicine = voci
     .map(([id, e]) => { const c = coordDi(e); return c ? [id, e, distanzaKm(centro, c)] : null; })
-    .filter(v => v && v[2] <= 150)
+    .filter(v => v && v[2] <= RAGGIO_VICINE)
     .sort((a, b) => a[2] - b[2])
     .slice(0, 8);
+  if (!vicine.length) return { voci: [], modo: 'luogo' };
   return { voci: vicine.map(v => [v[0], v[1]]), distanze: vicine.map(v => v[2]), modo: 'vicine' };
 }
 
@@ -5322,16 +5360,20 @@ function renderInfoRisultati(esito) {
   const chip = (chiave, testo) =>
     `<button class="filtro-chip" data-togli="${chiave}" aria-label="Togli filtro: ${esc2(testo)}">${esc2(testo)} <span>✕</span></button>`;
   const chips = [];
-  if (RICERCA.testo)  chips.push(chip('testo', '📍 ' + (RICERCA.luogo ? RICERCA.luogo.nome : RICERCA.testo)));
+  if (RICERCA.testo)  chips.push(chip('testo', RICERCA.luogo
+                        ? '📍 ' + RICERCA.luogo.nome
+                        : '🔍 “' + RICERCA.testo + '”'));
   if (RICERCA.cat !== 'all') chips.push(chip('cat', ETICHETTE_CAT[RICERCA.cat]));
   if (RICERCA.persone) chips.push(chip('persone', '👥 ' + RICERCA.persone + (RICERCA.persone === 1 ? ' persona' : ' persone')));
   if (RICERCA.data)   chips.push(chip('data', '📅 ' + new Date(RICERCA.data + 'T12:00')
                         .toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })));
 
   const n = esito.voci.length;
-  const conta = esito.modo === 'vicine'
-    ? 'Nessuna esperienza lì · le più vicine:'
-    : `${n} ${n === 1 ? 'risultato' : 'risultati'}`;
+  const conta = esito.modo === 'attesa'
+    ? 'Cerco…'
+    : esito.modo === 'vicine'
+      ? `Nessuna esperienza a ${esc2(RICERCA.luogo.nome)} · le più vicine (entro ${RAGGIO_VICINE} km):`
+      : `${n} ${n === 1 ? 'risultato' : 'risultati'}`;
 
   // La data non filtra: le esperienze non hanno ancora un calendario.
   // Lo diciamo invece di fingere un filtro che non c'è.
@@ -5354,6 +5396,7 @@ window.renderTutte = function () {
   document.getElementById('contatoreEsperienze').textContent =
     tot ? `${tot} ${tot === 1 ? 'esperienza' : 'esperienze'}` : '';
   renderInfoRisultati(esito);
+  if (esito.modo === 'attesa') return;   // pochi decimi di secondo: niente sfarfallio
   aggiornaMappa(voci);
 
   if (!voci.length) {
@@ -5362,8 +5405,10 @@ window.renderTutte = function () {
         'Pubblica la tua e sarà la prima a comparire qui.', true);
     } else {
       box.innerHTML = statoVuoto('🔍', 'Nessun risultato',
-        RICERCA.testo
-          ? 'Non ci sono ancora esperienze per questa ricerca. Prova a togliere un filtro o a cercare una zona più ampia.'
+        RICERCA.luogo
+          ? `Non ci sono ancora esperienze a ${esc2(RICERCA.luogo.nome)} né entro ${RAGGIO_VICINE} km. Prova una zona più ampia o togli un filtro.`
+          : RICERCA.testo
+            ? 'Nessuna esperienza contiene queste parole. Prova con un luogo o con parole diverse.'
           : 'Prova a togliere un filtro.',
         false,
         '<button class="btn-primary" style="border:none;cursor:pointer;margin-bottom:0.8rem" data-togli="tutto">Mostra tutte</button><br>');
@@ -5402,24 +5447,61 @@ function vaiAiRisultati() {
   window.scrollTo({ top: y, behavior: 'smooth' });
 }
 
-// Unico punto d'ingresso: aggiorna lo stato, risolve il luogo se serve, ridisegna
+// Il testo coincide con la città di un'esperienza pubblicata? Risposta immediata.
+function luogoLocale(testo) {
+  const t = normalizza(testo);
+  const qui = Object.values(CATALOGO).filter(e => normalizza(e.citta) === t);
+  if (!qui.length) return null;
+  const conCoord = qui.find(e => coordDi(e));
+  const c = conCoord ? coordDi(conCoord) : null;
+  return { nome: qui[0].citta, nomeBreve: qui[0].citta,
+           lat: c ? c[0] : null, lng: c ? c[1] : null, bbox: null, punteggio: 100 };
+}
+
+// Il luogo trovato da Photon è davvero quello scritto? ("pasta" ≠ un paesino
+// che si chiama Pasta, a meno che non ci sia altro da mostrare)
+function nomeCorrisponde(nome, testo) {
+  const q = parole(testo).filter(w => w.length >= 3);
+  const n = parole(nome);
+  if (!q.length) return false;
+  const ok = q.filter(w => n.some(x => x.startsWith(w) || (x.length >= 4 && w.startsWith(x)))).length;
+  return ok > 0 && ok * 2 >= q.length;
+}
+
+// Unico punto d'ingresso: decide se il testo è un luogo o parole chiave, poi ridisegna
 let ricercaSeq = 0;
 async function eseguiRicerca(opzioni = {}) {
   const seq = ++ricercaSeq;
-  sincronizzaCampi();
-  window.renderTutte();                       // subito: risultati testuali
-  if (opzioni.scorri) vaiAiRisultati();
+  const t = RICERCA.testo.trim();
+  RICERCA.inAttesa = false;
 
-  // Testo libero non scelto dalla lista: proviamo a capire se è un luogo,
-  // così "Toscana" trova anche le esperienze a Orbetello o Siena.
-  if (RICERCA.testo && !RICERCA.luogo) {
-    const geo = await geocodifica(RICERCA.testo);
-    if (seq !== ricercaSeq) return;           // nel frattempo è partita un'altra ricerca
-    if (geo && normalizza(geo.nome).includes(normalizza(RICERCA.testo).split(' ')[0])) {
-      RICERCA.luogo = { ...geo, nome: RICERCA.testo };
-      window.renderTutte();
+  if (t && !RICERCA.luogo && RICERCA.testoRisolto !== t) {
+    const locale = luogoLocale(t);
+    if (locale) { RICERCA.luogo = locale; RICERCA.testoRisolto = t; }
+    else RICERCA.inAttesa = true;
+  }
+
+  sincronizzaCampi();
+  window.renderTutte();
+  if (opzioni.scorri) vaiAiRisultati();
+  if (!RICERCA.inAttesa) return;
+
+  let geo = null;
+  try { geo = await geocodifica(t); } catch (e) { console.warn(e); }
+  if (seq !== ricercaSeq) return;           // nel frattempo è partita un'altra ricerca
+
+  RICERCA.inAttesa = false;
+  RICERCA.testoRisolto = t;
+  if (geo && nomeCorrisponde(geo.nomeBreve || geo.nome, t)) {
+    const conParole = Object.values(CATALOGO).filter(e => corrispondeParole(e, t)).length;
+    // Città, paesi e regioni vincono sempre; frazioni e località minori
+    // solo se come parola chiave non trova niente.
+    if ((geo.punteggio ?? 60) >= 60 || conParole === 0) {
+      RICERCA.luogo = { ...geo, nome: geo.nomeBreve || t };
     }
   }
+  sincronizzaCampi();
+  window.renderTutte();
 }
 
 function leggiCampiECerca() {
@@ -5563,7 +5645,7 @@ function renderConteggi() {
 
   document.querySelectorAll('.dest-name').forEach(d => {
     const cerca = normalizza(d.dataset.citta);
-    const n = tutte.filter(e => normalizza(e.citta + ' ' + e.luogoCompleto).includes(cerca)).length;
+    const n = tutte.filter(e => stessoLuogo(e, cerca)).length;
     const el = d.parentElement.querySelector('.dest-count');
     if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
   });
@@ -5718,7 +5800,7 @@ const COORD_NOTE = {
   bari:[41.1171,16.8719], catania:[37.5079,15.083], verona:[45.4384,10.9916]
 };
 
-const CACHE_GEO = 'lg_geo_v2';   // v2: le voci ora includono il riquadro (bbox)
+const CACHE_GEO = 'lg_geo_v3';   // v3: le voci includono riquadro, nome breve e punteggio
 const leggiCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_GEO)) || {}; } catch { return {}; } };
 const scriviCache = c => { try { localStorage.setItem(CACHE_GEO, JSON.stringify(c)); } catch {} };
 
@@ -5730,6 +5812,21 @@ const ICONE_LUOGO = {
   bay: '🌊', beach: '🏖', peak: '⛰', mountain_range: '⛰', valley: '🏞'
 };
 
+// Quanto "conta" un luogo. Serve a tenere Milano e togliere le frazioni,
+// i quartieri e le località che per caso si chiamano Milano.
+const PUNTI_LUOGO = {
+  city: 100, town: 90, state: 85, region: 85, province: 80, county: 80,
+  island: 75, archipelago: 75, municipality: 70, village: 60,
+  peninsula: 60, bay: 55, beach: 55, peak: 55, mountain_range: 55, valley: 55,
+  suburb: 40, quarter: 35, neighbourhood: 30, hamlet: 30, locality: 20,
+  isolated_dwelling: 10, farm: 10, allotments: 10
+};
+const PUNTI_TIPO = { city: 95, state: 85, county: 80, country: 70, district: 40, locality: 20 };
+function punteggioLuogo(p) {
+  if (p.osm_key === 'boundary') return PUNTI_TIPO[p.type] ?? 50;
+  return PUNTI_LUOGO[p.osm_value] ?? PUNTI_TIPO[p.type] ?? 50;
+}
+
 // Scartiamo indirizzi, strade e singoli edifici: qui si cercano luoghi
 const TIPI_SCARTATI = new Set(['house', 'street']);
 const CHIAVI_SCARTATE = new Set(['highway', 'building', 'amenity', 'shop', 'railway', 'office']);
@@ -5737,22 +5834,23 @@ const CHIAVI_SCARTATE = new Set(['highway', 'building', 'amenity', 'shop', 'rail
 /* Interroga Photon e restituisce luoghi già puliti */
 async function cercaPhoton(testo, { limite = 6, signal } = {}) {
   const url = 'https://photon.komoot.io/api/?lang=default'
-    + '&limit=' + Math.min(limite + 4, 15)          // ne chiediamo qualcuno in più: alcuni li scartiamo
+    + '&limit=' + Math.min(limite + 8, 20)          // ne chiediamo di più: molti li scartiamo
     + '&lat=42.5&lon=12.5&zoom=6&location_bias_scale=0.3'   // preferenza per l'Italia, senza escludere il resto
     + '&q=' + encodeURIComponent(testo);
   const r = await fetch(url, { signal });
   if (!r.ok) return [];
   const dati = await r.json();
 
-  const visti = new Set();
-  return (dati.features || [])
+  const perChiave = new Map();
+  (dati.features || [])
     .filter(f => {
       const p = f.properties || {};
       return !TIPI_SCARTATI.has(p.type) && !CHIAVI_SCARTATE.has(p.osm_key);
     })
-    .map(f => {
+    .forEach(f => {
       const p = f.properties;
       const [lng, lat] = f.geometry.coordinates;
+      if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
       const nome = p.name || p.city || p.county || p.state || testo;
       const contesto = [p.county, p.state, p.country]
         .filter((x, i, a) => x && x !== nome && a.indexOf(x) === i).join(', ');
@@ -5762,21 +5860,36 @@ async function cercaPhoton(testo, { limite = 6, signal } = {}) {
         const [x1, y1, x2, y2] = p.extent.map(Number);
         bbox = [Math.min(y1, y2), Math.min(x1, x2), Math.max(y1, y2), Math.max(x1, x2)];
       }
-      return {
+      const voce = {
         nome,
         dettaglio: contesto,
         icona: ICONE_LUOGO[p.osm_value] || ICONE_LUOGO[p.type] || '📍',
         lat: Number(lat), lng: Number(lng),
-        bbox
+        bbox,
+        punteggio: punteggioLuogo(p)
       };
-    })
-    .filter(v => {
-      const k = normalizza(v.nome + '|' + v.dettaglio);
-      if (visti.has(k)) return false;
-      visti.add(k);
-      return Number.isFinite(v.lat) && Number.isFinite(v.lng);
-    })
-    .slice(0, limite);
+      // Stesso luogo due volte (il punto e il confine comunale): una sola voce,
+      // con il punteggio più alto e il riquadro se uno dei due lo ha
+      const k = normalizza(nome + '|' + contesto);
+      const gia = perChiave.get(k);
+      if (!gia) perChiave.set(k, voce);
+      else {
+        gia.punteggio = Math.max(gia.punteggio, voce.punteggio);
+        gia.bbox = gia.bbox || voce.bbox;
+      }
+    });
+
+  let voci = [...perChiave.values()];
+
+  // Se c'è almeno un paese o una città, frazioni, quartieri e località spariscono
+  if (voci.some(v => v.punteggio >= 60)) voci = voci.filter(v => v.punteggio >= 50);
+
+  // Omonimi: se esiste la città/il paese "Milano", i paesini che si chiamano
+  // Milano altrove non servono
+  const forti = new Set(voci.filter(v => v.punteggio >= 90).map(v => normalizza(v.nome)));
+  voci = voci.filter(v => v.punteggio >= 90 || !forti.has(normalizza(v.nome)));
+
+  return voci.slice(0, limite);
 }
 
 let ultimaChiamataGeo = 0;
@@ -5786,7 +5899,8 @@ async function geocodifica(luogo) {
   const chiave = normalizza(luogo);
   if (!chiave) return null;
 
-  if (COORD_NOTE[chiave]) return { lat: COORD_NOTE[chiave][0], lng: COORD_NOTE[chiave][1], nome: luogo, bbox: null };
+  if (COORD_NOTE[chiave]) return { lat: COORD_NOTE[chiave][0], lng: COORD_NOTE[chiave][1],
+                                     nome: luogo, nomeBreve: luogo, bbox: null, punteggio: 100 };
 
   const cache = leggiCache();
   if (cache[chiave]) return cache[chiave];
@@ -5802,7 +5916,9 @@ async function geocodifica(luogo) {
     const esito = {
       lat: r.lat, lng: r.lng,
       nome: r.nome + (r.dettaglio ? ', ' + r.dettaglio : ''),
-      bbox: r.bbox
+      nomeBreve: r.nome,
+      bbox: r.bbox,
+      punteggio: r.punteggio
     };
     cache[chiave] = esito;
     scriviCache(cache);
@@ -5948,7 +6064,9 @@ function cittaConEsperienze(q) {
   const perCitta = {};
   Object.values(CATALOGO).forEach(e => {
     const k = normalizza(e.citta);
-    if (t && !normalizza(e.citta + ' ' + e.luogoCompleto).includes(t)) return;
+    // Inizio di parola: "rom" propone Roma, "oma" no
+    if (t && !normalizza(e.citta).startsWith(t)
+          && !parole(e.citta).some(w => w.startsWith(t))) return;
     if (!perCitta[k]) perCitta[k] = { nome: e.citta, dettaglio: '', n: 0, c: coordDi(e) };
     perCitta[k].n++;
   });
@@ -5974,8 +6092,9 @@ collegaAutocompleta({
     RICERCA.testo = v.nome;
     // Una città "locale" si cerca per nome (e dintorni se ha coordinate);
     // un luogo di Photon porta con sé il suo riquadro geografico.
-    RICERCA.luogo = (v.lat != null && v.lng != null)
-      ? { nome: v.nome, lat: v.lat, lng: v.lng, bbox: v.bbox } : null;
+    RICERCA.luogo = { nome: v.nome, nomeBreve: v.nome, lat: v.lat, lng: v.lng,
+                      bbox: v.bbox, punteggio: v.punteggio ?? 100 };
+    RICERCA.testoRisolto = v.nome;
     leggiCampiECerca();
   }
 });
