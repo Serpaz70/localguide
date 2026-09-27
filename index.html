@@ -1,0 +1,5595 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalGuide — Esperienze autentiche con guide locali</title>
+<meta name="description" content="Scopri esperienze locali autentiche: cucina, arte, avventura e tour guidati da persone del posto. Non i soliti tour turistici.">
+<meta name="theme-color" content="#C4602A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23C4602A'/%3E%3Cpath d='M50 20c-11 0-20 9-20 20 0 15 20 40 20 40s20-25 20-40c0-11-9-20-20-20zm0 27a7 7 0 110-14 7 7 0 010 14z' fill='%23fff'/%3E%3C/svg%3E">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="LocalGuide — Esperienze autentiche con guide locali">
+<meta property="og:description" content="Viaggia con chi la città la conosce davvero. Esperienze uniche guidate da persone del posto.">
+<meta property="og:image" content="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&q=80">
+<meta property="og:locale" content="it_IT">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --cream: #F5F0E8;
+    --terra: #C4602A;
+    --terra-light: #E07A4A;
+    --moss: #3D5A3E;
+    --moss-light: #5A7D5B;
+    --sand: #E8DCC8;
+    --charcoal: #1C1C1C;
+    --warm-gray: #8A7F72;
+    --accent-gold: #C9A84C;
+    --white: #FEFCF8;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  /* NIENTE overflow su <html>: sia 'hidden' sia 'clip' interferiscono con
+     position:fixed sui browser mobili e fanno sparire la navbar. */
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    overflow-x: hidden;
+  }
+  body.custom-cursor { cursor: none; }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--terra);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .2s, height .2s, background .2s;
+    mix-blend-mode: multiply;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--terra);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all .15s ease;
+    opacity: 0.6;
+  }
+  body:hover .cursor { opacity: 1; }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9997;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1.2rem 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Sfondo PIENO, senza backdrop-filter: su iOS un elemento fixed con
+       backdrop-filter non viene disegnato finché non si scorre la pagina.
+       Niente transform/will-change qui: creerebbero un blocco contenitore
+       e il pannello del menu mobile (fixed, figlio di nav) si romperebbe. */
+    background: var(--cream);
+    border-bottom: 1px solid rgba(196, 96, 42, 0.1);
+  }
+
+  /* Il vetro smerigliato solo dove c'è un puntatore vero, cioè desktop:
+     lì il difetto di iOS non esiste e l'effetto si può tenere. */
+  @media (hover: hover) and (pointer: fine) {
+    nav {
+      background: rgba(245, 240, 232, 0.88);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+    }
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--charcoal);
+    text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--terra); font-style: italic; }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--terra); }
+
+  .nav-cta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .btn-ghost {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--charcoal);
+    text-decoration: none;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid transparent;
+    border-radius: 100px;
+    transition: all .2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-ghost:hover { border-color: var(--terra); color: var(--terra); }
+
+  .btn-primary {
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: var(--terra);
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: all .25s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary:hover { background: var(--terra-light); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(196,96,42,0.3); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    padding: 12rem 4rem 6rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--terra);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 2rem;
+    height: 1px;
+    background: var(--terra);
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 5vw, 5.5rem);
+    line-height: 1.05;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.8rem;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--terra);
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--warm-gray);
+    max-width: 420px;
+    margin-bottom: 2.8rem;
+    font-weight: 300;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-large {
+    font-size: 1rem;
+    font-weight: 500;
+    background: var(--charcoal);
+    color: white;
+    padding: 1rem 2.2rem;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: all .25s;
+    letter-spacing: 0.01em;
+  }
+  .btn-large:hover { background: var(--terra); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(28,28,28,0.2); }
+
+  .btn-outline-large {
+    font-size: 1rem;
+    font-weight: 400;
+    border: 1.5px solid var(--charcoal);
+    color: var(--charcoal);
+    padding: 1rem 2.2rem;
+    border-radius: 100px;
+    text-decoration: none;
+    transition: all .25s;
+  }
+  .btn-outline-large:hover { border-color: var(--terra); color: var(--terra); }
+
+  .hero-stats {
+    margin-top: 4rem;
+    display: flex;
+    gap: 3rem;
+  }
+  .stat-item {}
+  .stat-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--charcoal);
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.2rem;
+  }
+
+  .hero-right {
+    position: relative;
+    overflow: hidden;
+    background: var(--charcoal);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .hero-img {
+    overflow: hidden;
+    position: relative;
+  }
+  .hero-img img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform .6s ease;
+  }
+  .hero-img:hover img { transform: scale(1.05); }
+
+  .hero-img-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 1rem 1.2rem;
+    background: linear-gradient(to top, rgba(28,28,28,0.7), transparent);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  /* SEARCH BAR */
+  .search-section {
+    background: var(--white);
+    padding: 3rem 4rem;
+    border-bottom: 1px solid var(--sand);
+  }
+
+  .search-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .search-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+    color: var(--charcoal);
+  }
+
+  .search-bar {
+    display: flex;
+    background: white;
+    border: 1.5px solid var(--sand);
+    border-radius: 100px;
+    overflow: hidden;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.06);
+    transition: box-shadow .3s;
+  }
+  .search-bar:focus-within {
+    box-shadow: 0 4px 40px rgba(196,96,42,0.15);
+    border-color: var(--terra);
+  }
+
+  .search-field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.8rem;
+    flex: 1;
+    border-right: 1px solid var(--sand);
+    cursor: text;
+  }
+  .search-field:last-of-type { border-right: none; }
+
+  .search-field-icon {
+    font-size: 1rem;
+    opacity: 0.5;
+  }
+
+  .search-field-content { flex: 1; }
+  .search-field-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm-gray);
+    display: block;
+  }
+  .search-field input, .search-field select {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--charcoal);
+    width: 100%;
+    cursor: pointer;
+  }
+  .search-field select { appearance: none; }
+
+  .search-btn {
+    background: var(--terra);
+    color: white;
+    border: none;
+    padding: 0 2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background .2s;
+    margin: 6px;
+    border-radius: 100px;
+  }
+  .search-btn:hover { background: var(--terra-light); }
+
+  .search-tags {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.78rem;
+    padding: 0.4rem 1rem;
+    border-radius: 100px;
+    border: 1px solid var(--sand);
+    color: var(--warm-gray);
+    background: white;
+    cursor: pointer;
+    transition: all .2s;
+    font-weight: 400;
+  }
+  .tag:hover { border-color: var(--terra); color: var(--terra); background: rgba(196,96,42,0.04); }
+
+  /* CATEGORIES */
+  .categories {
+    padding: 5rem 4rem;
+    background: var(--cream);
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 3rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .section-title em { color: var(--terra); font-style: italic; }
+
+  .section-link {
+    font-size: 0.85rem;
+    color: var(--terra);
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: gap .2s;
+  }
+  .section-link:hover { gap: 0.8rem; }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+
+  .cat-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .3s, box-shadow .3s;
+    border: 1px solid var(--sand);
+  }
+  .cat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+
+  .cat-img {
+    height: 130px;
+    overflow: hidden;
+    position: relative;
+  }
+  .cat-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+  .cat-card:hover .cat-img img { transform: scale(1.08); }
+
+  .cat-body {
+    padding: 1rem 1.2rem;
+  }
+  .cat-icon { font-size: 1.3rem; margin-bottom: 0.4rem; }
+  .cat-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--charcoal);
+    margin-bottom: 0.2rem;
+  }
+  .cat-count { font-size: 0.75rem; color: var(--warm-gray); }
+
+  /* FEATURED */
+  .featured {
+    padding: 5rem 4rem;
+    background: var(--white);
+  }
+
+  .exp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 0;
+  }
+
+  .exp-card {
+    background: var(--cream);
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .3s, box-shadow .3s;
+    border: 1px solid var(--sand);
+    position: relative;
+  }
+  .exp-card:hover { transform: translateY(-6px); box-shadow: 0 30px 60px rgba(0,0,0,0.12); }
+  .exp-card.featured-large {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .exp-img {
+    position: relative;
+    overflow: hidden;
+    height: 220px;
+  }
+  .exp-card.featured-large .exp-img { height: 100%; min-height: 400px; }
+
+  .exp-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+  .exp-card:hover .exp-img img { transform: scale(1.05); }
+
+  .exp-badge {
+    position: absolute;
+    top: 1rem; left: 1rem;
+    background: white;
+    color: var(--terra);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.85rem;
+    border-radius: 100px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
+  .exp-wishlist {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    width: 36px; height: 36px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform .2s;
+    border: none;
+  }
+  .exp-wishlist:hover { transform: scale(1.1); }
+
+  .exp-body {
+    padding: 1.3rem 1.5rem 1.5rem;
+  }
+
+  .exp-location {
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--terra);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .exp-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 0.7rem;
+    letter-spacing: -0.01em;
+  }
+  .exp-card.featured-large .exp-title { font-size: 1.6rem; }
+
+  .exp-host {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+  }
+  .host-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+  }
+  .host-name {
+    font-size: 0.8rem;
+    color: var(--warm-gray);
+  }
+  .host-verified {
+    color: var(--moss);
+    font-size: 0.8rem;
+  }
+
+  .exp-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .exp-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--charcoal);
+  }
+  .exp-price span {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--warm-gray);
+  }
+
+  .exp-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .star { color: var(--accent-gold); }
+
+  .exp-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+  .exp-meta-item {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* HOW IT WORKS */
+  .how {
+    padding: 7rem 4rem;
+    background: var(--charcoal);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .how::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(196,96,42,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .how .section-title { color: white; }
+  .how .section-title em { color: var(--terra-light); }
+
+  .how-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6rem;
+    margin-top: 4rem;
+    align-items: center;
+  }
+
+  .how-steps { }
+
+  .step {
+    display: flex;
+    gap: 1.8rem;
+    padding: 2rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    transition: all .3s;
+    cursor: default;
+  }
+  .step:first-child { padding-top: 0; }
+  .step:last-child { border-bottom: none; }
+  .step:hover .step-num { background: var(--terra); color: white; }
+
+  .step-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    flex-shrink: 0;
+    transition: all .3s;
+  }
+
+  .step-content {}
+  .step-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.01em;
+  }
+  .step-desc {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .how-visual {
+    position: relative;
+  }
+
+  .how-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    overflow: hidden;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .how-card-img {
+    height: 300px;
+    overflow: hidden;
+    position: relative;
+  }
+  .how-card-img img { width: 100%; height: 100%; object-fit: cover; }
+
+  .how-card-body {
+    padding: 1.8rem 2rem;
+  }
+
+  .how-guide-profile {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+  .guide-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--terra);
+  }
+  .guide-info {}
+  .guide-name { font-weight: 600; font-size: 1rem; }
+  .guide-origin { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+
+  .how-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 1rem;
+  }
+  .how-card-stat {
+    padding: 1rem;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  .how-card-stat:last-child { border-right: none; }
+  .how-card-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .how-card-stat-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 0.2rem; }
+
+  /* GUIDES */
+  .guides {
+    padding: 5rem 4rem;
+    background: var(--cream);
+  }
+
+  .guides-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .guide-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .3s, box-shadow .3s;
+    border: 1px solid var(--sand);
+    text-decoration: none;
+    color: inherit;
+  }
+  .guide-card:hover { transform: translateY(-5px); box-shadow: 0 25px 50px rgba(0,0,0,0.1); }
+
+  .guide-card-header {
+    height: 160px;
+    position: relative;
+    overflow: hidden;
+  }
+  .guide-card-header img { width: 100%; height: 100%; object-fit: cover; }
+  .guide-card-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.5));
+  }
+
+  .guide-card-avatar {
+    position: absolute;
+    bottom: -28px; left: 1.2rem;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    z-index: 2;
+  }
+
+  .guide-card-body {
+    padding: 2.2rem 1.3rem 1.3rem;
+  }
+
+  .guide-card-name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+  }
+  .guide-card-city {
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .guide-card-bio {
+    font-size: 0.82rem;
+    color: var(--warm-gray);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+  .guide-card-tags {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .guide-tag {
+    font-size: 0.68rem;
+    padding: 0.25rem 0.7rem;
+    background: var(--cream);
+    border-radius: 100px;
+    color: var(--warm-gray);
+    font-weight: 500;
+    border: 1px solid var(--sand);
+  }
+  .guide-tag.moss { background: rgba(61,90,62,0.1); color: var(--moss); border-color: transparent; }
+  .guide-tag.terra { background: rgba(196,96,42,0.1); color: var(--terra); border-color: transparent; }
+
+  /* DESTINATIONS */
+  .destinations {
+    padding: 5rem 4rem;
+    background: var(--white);
+  }
+
+  .dest-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 1rem;
+  }
+
+  .dest-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    height: 250px;
+  }
+  .dest-card:first-child { grid-row: span 2; height: 100%; }
+
+  .dest-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+  .dest-card:hover img { transform: scale(1.06); }
+
+  .dest-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.65));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.5rem;
+    color: white;
+  }
+  .dest-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.2rem;
+  }
+  .dest-card:first-child .dest-name { font-size: 2.2rem; }
+  .dest-count { font-size: 0.8rem; opacity: 0.8; }
+
+  /* TESTIMONIALS */
+  .testimonials {
+    padding: 6rem 4rem;
+    background: var(--sand);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .test-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  .test-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .test-quote {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    color: var(--terra);
+    line-height: 0.5;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .test-text {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: var(--charcoal);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .test-author {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .test-author img {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .test-author-name { font-weight: 600; font-size: 0.88rem; }
+  .test-author-info { font-size: 0.75rem; color: var(--warm-gray); }
+
+  .test-rating {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 1rem;
+  }
+
+  /* CTA BECOME GUIDE */
+  .become-guide {
+    padding: 6rem 4rem;
+    background: var(--moss);
+    color: white;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .become-guide::before {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    border: 80px solid rgba(255,255,255,0.04);
+    pointer-events: none;
+  }
+
+  .become-guide-content {}
+  .become-guide-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .become-guide-eyebrow::before {
+    content: '';
+    width: 2rem; height: 1px;
+    background: rgba(255,255,255,0.4);
+    display: inline-block;
+  }
+
+  .become-guide-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+  .become-guide-title em { font-style: italic; color: rgba(255,255,255,0.65); }
+
+  .become-guide-desc {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 2rem;
+    font-weight: 300;
+  }
+
+  .btn-white {
+    background: white;
+    color: var(--moss);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 1rem 2.2rem;
+    border-radius: 100px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all .25s;
+  }
+  .btn-white:hover { background: var(--cream); transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.2); }
+
+  .become-guide-perks {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .perk {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.5rem;
+    background: rgba(255,255,255,0.07);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: background .2s;
+  }
+  .perk:hover { background: rgba(255,255,255,0.11); }
+  .perk-icon { font-size: 1.5rem; }
+  .perk-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; }
+  .perk-desc { font-size: 0.82rem; color: rgba(255,255,255,0.55); line-height: 1.5; font-weight: 300; }
+
+  /* FOOTER */
+  footer {
+    background: var(--charcoal);
+    color: white;
+    padding: 4rem 4rem 2rem;
+  }
+
+  .footer-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 2rem;
+  }
+
+  .footer-brand {}
+  .footer-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    display: block;
+    color: white;
+    text-decoration: none;
+  }
+  .footer-logo span { color: var(--terra-light); font-style: italic; }
+
+  .footer-tagline {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.6;
+    max-width: 260px;
+    font-weight: 300;
+  }
+
+  .footer-col-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 1.2rem;
+  }
+
+  .footer-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .footer-links a {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    transition: color .2s;
+    font-weight: 300;
+  }
+  .footer-links a:hover { color: white; }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .footer-social {
+    display: flex;
+    gap: 1rem;
+  }
+  .social-btn {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all .2s;
+  }
+  .social-btn:hover { border-color: var(--terra); color: var(--terra-light); }
+
+  /* ANIMATIONS */
+  /* Comparsa senza transform: serve dove l'elemento contiene figli
+   position:fixed, perché un transform li staccherebbe dal viewport. */
+  @keyframes fadeOnly {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .hero-eyebrow { animation: slideIn .8s ease both; animation-delay: .1s; }
+  .hero-title { animation: fadeUp .9s ease both; animation-delay: .2s; }
+  .hero-sub { animation: fadeUp .9s ease both; animation-delay: .35s; }
+  .hero-actions { animation: fadeUp .9s ease both; animation-delay: .5s; }
+  .hero-stats { animation: fadeUp .9s ease both; animation-delay: .65s; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 400;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--cream);
+    border-radius: 24px;
+    padding: 3rem;
+    max-width: 440px;
+    width: 90%;
+    position: relative;
+    animation: fadeUp .4s ease both;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1.2rem; right: 1.2rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--warm-gray);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s;
+  }
+  .modal-close:hover { background: var(--sand); }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.02em;
+  }
+  .modal-sub { font-size: 0.88rem; color: var(--warm-gray); margin-bottom: 2rem; }
+
+  .form-group { margin-bottom: 1.2rem; }
+  .form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--warm-gray);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .form-input {
+    width: 100%;
+    padding: 0.85rem 1.2rem;
+    border: 1.5px solid var(--sand);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: var(--charcoal);
+    background: white;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .form-input:focus { border-color: var(--terra); }
+
+  .form-divider {
+    text-align: center;
+    position: relative;
+    margin: 1.4rem 0;
+    font-size: 0.8rem;
+    color: var(--warm-gray);
+  }
+  .form-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    height: 1px;
+    background: var(--sand);
+    z-index: 0;
+  }
+  .form-divider span {
+    background: var(--cream);
+    padding: 0 1rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-full {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .25s;
+  }
+  .btn-full-primary { background: var(--terra); color: white; }
+  .btn-full-primary:hover { background: var(--terra-light); }
+  .btn-full-google {
+    background: white;
+    color: var(--charcoal);
+    border: 1.5px solid var(--sand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .btn-full-google:hover { border-color: var(--terra); }
+
+  .modal-switch {
+    text-align: center;
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--warm-gray);
+  }
+  .modal-switch a {
+    color: var(--terra);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  /* SCROLL REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ===== AUTH UI ===== */
+  .auth-alert {
+    display: none;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    margin-bottom: 1.2rem;
+    border: 1px solid transparent;
+  }
+  .auth-alert.show { display: block; animation: fadeUp .25s ease both; }
+  .auth-alert.error { background: rgba(196,96,42,0.1); color: #9B4A1E; border-color: rgba(196,96,42,0.25); }
+  .auth-alert.success { background: rgba(61,90,62,0.1); color: var(--moss); border-color: rgba(61,90,62,0.25); }
+
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute;
+    right: 0.6rem; top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+    opacity: 0.4;
+    padding: 0.3rem;
+    transition: opacity .2s;
+  }
+  .pw-toggle:hover { opacity: 0.8; }
+
+  .pw-strength {
+    height: 3px;
+    background: var(--sand);
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+  .pw-strength-bar {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    transition: width .3s, background .3s;
+  }
+  .pw-strength-label {
+    font-size: 0.7rem;
+    color: var(--warm-gray);
+    margin-top: 0.3rem;
+    min-height: 0.9rem;
+  }
+
+  .forgot-link {
+    text-align: right;
+    margin: -0.5rem 0 1rem;
+  }
+  .forgot-link a {
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .forgot-link a:hover { color: var(--terra); }
+
+  .btn-full:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-full-google svg { flex-shrink: 0; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 15px; height: 15px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: -2px;
+  }
+  .btn-full-google .spinner { border-color: rgba(0,0,0,0.15); border-top-color: var(--terra); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* USER CHIP + MENU */
+  #navUser { position: relative; }
+
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: white;
+    border: 1.5px solid var(--sand);
+    border-radius: 100px;
+    padding: 0.35rem 0.9rem 0.35rem 0.35rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .2s;
+  }
+  .user-chip:hover { border-color: var(--terra); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
+
+  .user-chip-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--sand);
+  }
+  .user-chip-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--charcoal);
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .user-chip-caret { font-size: 0.65rem; color: var(--warm-gray); }
+
+  .user-menu {
+    display: none;                 /* fuori dal flusso: niente overflow da chiuso */
+    position: absolute;
+    top: calc(100% + 0.7rem);
+    right: 0;
+    left: auto;
+    width: min(250px, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.14);
+    padding: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all .22s ease;
+    z-index: 150;
+  }
+  .user-menu.open {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    animation: fadeUp .22s ease both;
+  }
+
+  .user-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.9rem;
+    border-bottom: 1px solid var(--sand);
+    margin-bottom: 0.4rem;
+  }
+  .user-menu-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--sand);
+    flex-shrink: 0;
+  }
+  .user-menu-name { font-weight: 600; font-size: 0.88rem; }
+  .user-menu-email {
+    font-size: 0.73rem;
+    color: var(--warm-gray);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-menu-item {
+    display: block;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.86rem;
+    color: var(--charcoal);
+    text-decoration: none;
+    border-radius: 9px;
+    transition: background .15s;
+    cursor: pointer;
+  }
+  .user-menu-item:hover { background: var(--cream); }
+  .user-menu-item.danger { color: var(--terra); }
+
+  .user-menu-divider {
+    height: 1px;
+    background: var(--sand);
+    margin: 0.4rem 0.5rem;
+  }
+
+  /* ===== LEAFLET CUSTOM STYLES ===== */
+  #leaflet-map { z-index: 1; }
+
+  .lg-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
+    transition: transform .2s, filter .2s;
+  }
+  .lg-marker:hover { transform: scale(1.12); filter: drop-shadow(0 6px 16px rgba(196,96,42,0.4)); }
+
+  .lg-marker-inner {
+    width: 44px; height: 44px;
+    background: white;
+    border: 3px solid #8A7F72;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .2s, background .2s;
+  }
+  .lg-marker-emoji {
+    transform: rotate(45deg);
+    font-size: 1.1rem;
+    display: block;
+  }
+  .lg-marker-price {
+    margin-top: 2px;
+    background: white;
+    border: 1.5px solid #E8DCC8;
+    border-radius: 100px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    color: #1C1C1C;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
+  .lg-marker-active .lg-marker-inner {
+    background: #C4602A;
+    border-color: #C4602A;
+  }
+  .lg-marker-active .lg-marker-emoji { filter: brightness(10); }
+  .lg-marker-active .lg-marker-price {
+    background: #C4602A;
+    color: white;
+    border-color: #C4602A;
+  }
+
+  /* Popup */
+  .lg-leaflet-popup .leaflet-popup-content-wrapper {
+    border-radius: 18px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    border: 1px solid #E8DCC8;
+  }
+  .lg-leaflet-popup .leaflet-popup-content {
+    margin: 0;
+    width: 240px !important;
+  }
+  .lg-leaflet-popup .leaflet-popup-tip-container { display: none; }
+  .lg-leaflet-popup .leaflet-popup-close-button {
+    top: 8px; right: 8px;
+    width: 26px; height: 26px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #8A7F72;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    z-index: 10;
+  }
+
+  .lg-popup { font-family: 'DM Sans', sans-serif; }
+  .lg-popup-img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+  }
+  .lg-popup-body { padding: 0.9rem 1rem 1rem; background: #F5F0E8; }
+  .lg-popup-cat {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #C4602A;
+    margin-bottom: 0.3rem;
+  }
+  .lg-popup-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #1C1C1C;
+    margin-bottom: 0.5rem;
+  }
+  .lg-popup-meta {
+    display: flex;
+    gap: 0.8rem;
+    font-size: 0.7rem;
+    color: #8A7F72;
+    margin-bottom: 0.6rem;
+  }
+  .lg-popup-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+  .lg-popup-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1C1C1C;
+  }
+  .lg-popup-price small { font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 400; color: #8A7F72; }
+  .lg-popup-rating {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #C9A84C;
+  }
+  .lg-popup-btn {
+    width: 100%;
+    padding: 0.6rem;
+    background: #C4602A;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .lg-popup-btn:hover { background: #E07A4A; }
+
+  /* Armonizza i tile con la palette del sito (solo i tile, non i marker) */
+  .leaflet-tile-pane {
+    filter: saturate(0.72) sepia(0.12) brightness(1.03) contrast(0.96);
+  }
+
+  /* Override Leaflet attribution */
+  .leaflet-control-attribution {
+    font-size: 0.6rem !important;
+    background: rgba(255,255,255,0.7) !important;
+  }
+
+  /* ===== TRENDING SECTION ===== */
+  .trending {
+    padding: 5rem 4rem;
+    background: var(--cream);
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+
+  .filter-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.55rem 1.3rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--sand);
+    background: white;
+    color: var(--warm-gray);
+    cursor: pointer;
+    transition: all .22s;
+    letter-spacing: 0.02em;
+  }
+  .filter-btn:hover { border-color: var(--terra); color: var(--terra); }
+  .filter-btn.active {
+    background: var(--terra);
+    border-color: var(--terra);
+    color: white;
+    box-shadow: 0 4px 14px rgba(196,96,42,0.3);
+  }
+
+  .trending-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+  }
+
+  .trending-card {
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid var(--sand);
+    transition: transform .3s, box-shadow .3s, opacity .35s;
+  }
+  .trending-card:hover { transform: translateY(-5px); box-shadow: 0 22px 50px rgba(0,0,0,0.1); }
+  .trending-card.hidden { display: none; }
+
+  .trending-img {
+    height: 180px;
+    overflow: hidden;
+    position: relative;
+  }
+  .trending-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+  .trending-card:hover .trending-img img { transform: scale(1.07); }
+
+  .trend-rank {
+    position: absolute;
+    top: 0.8rem; left: 0.8rem;
+    width: 32px; height: 32px;
+    background: var(--charcoal);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .trend-rank.top { background: var(--accent-gold); }
+
+  .trending-body {
+    padding: 1.1rem 1.2rem 1.3rem;
+  }
+  .trending-cat {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--terra);
+    margin-bottom: 0.4rem;
+  }
+  .trending-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.7rem;
+    letter-spacing: -0.01em;
+  }
+  .trending-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--sand);
+  }
+  .trending-price {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--charcoal);
+  }
+  .trending-price small { font-weight: 400; font-size: 0.75rem; color: var(--warm-gray); }
+  .trending-rating {
+    font-size: 0.78rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .trending-duration {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  /* ===== EXPERIENCE DETAIL MODAL ===== */
+  .exp-detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 300;
+    display: none;
+    overflow-y: auto;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    padding: 2rem;
+  }
+  .exp-detail-overlay.active { display: block; }
+
+  .exp-detail {
+    background: var(--cream);
+    border-radius: 28px;
+    max-width: 900px;
+    margin: 0 auto;
+    overflow: hidden;
+    animation: fadeUp .4s ease both;
+    position: relative;
+  }
+
+  .exp-detail-close {
+    position: absolute;
+    top: 1.2rem; right: 1.2rem;
+    z-index: 10;
+    width: 42px; height: 42px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    transition: transform .2s;
+  }
+  .exp-detail-close:hover { transform: scale(1.1); }
+
+  .exp-detail-gallery {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 260px 130px;
+    gap: 4px;
+    height: 394px;
+  }
+  .exp-detail-gallery .gal-main { grid-row: span 2; }
+  .exp-detail-gallery img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: opacity .3s;
+  }
+  .exp-detail-gallery img:hover { opacity: 0.9; cursor: zoom-in; }
+
+  .exp-detail-body {
+    padding: 2.5rem 3rem 3rem;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 3rem;
+  }
+
+  .exp-detail-main {}
+  .exp-detail-location {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--terra);
+    margin-bottom: 0.6rem;
+  }
+  .exp-detail-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+  .exp-detail-meta {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--sand);
+    border-bottom: 1px solid var(--sand);
+    margin-bottom: 1.5rem;
+  }
+  .exp-detail-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .exp-detail-meta-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm-gray);
+    font-weight: 600;
+  }
+  .exp-detail-meta-val {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--charcoal);
+  }
+
+  .exp-detail-desc {
+    font-size: 0.92rem;
+    line-height: 1.75;
+    color: var(--charcoal);
+    font-weight: 300;
+    margin-bottom: 1.8rem;
+  }
+
+  .exp-detail-includes {
+    margin-bottom: 1.8rem;
+  }
+  .exp-detail-includes-title {
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+  }
+  .includes-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .includes-list li {
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--charcoal);
+  }
+  .includes-list li::before {
+    content: '✓';
+    color: var(--moss);
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
+  .exp-detail-guide {
+    padding: 1.2rem;
+    background: white;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--sand);
+  }
+  .exp-detail-guide img {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--terra);
+  }
+  .exp-detail-guide-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.15rem; }
+  .exp-detail-guide-sub { font-size: 0.78rem; color: var(--warm-gray); }
+
+  /* BOOKING WIDGET */
+  .booking-widget {
+    background: white;
+    border-radius: 22px;
+    padding: 1.8rem;
+    border: 1px solid var(--sand);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+  }
+  .booking-price-row {
+    margin-bottom: 1.4rem;
+  }
+  .booking-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .booking-price-sub { font-size: 0.82rem; color: var(--warm-gray); font-weight: 400; }
+  .booking-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 0.3rem;
+    color: var(--charcoal);
+  }
+
+  .booking-field {
+    border: 1.5px solid var(--sand);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+  }
+  .booking-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+    border: 1.5px solid var(--sand);
+  }
+  .booking-input {
+    padding: 0.85rem 1rem;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--charcoal);
+    background: transparent;
+    width: 100%;
+  }
+  .booking-input-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm-gray);
+    display: block;
+    padding: 0.6rem 1rem 0;
+  }
+  .booking-row .booking-input-wrap:first-child {
+    border-right: 1px solid var(--sand);
+  }
+
+  .booking-breakdown {
+    padding: 1rem 0;
+    border-top: 1px solid var(--sand);
+    margin-top: 0.5rem;
+  }
+  .booking-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--warm-gray);
+    margin-bottom: 0.5rem;
+  }
+  .booking-line.total {
+    font-weight: 700;
+    color: var(--charcoal);
+    font-size: 0.95rem;
+    border-top: 1px solid var(--sand);
+    padding-top: 0.7rem;
+    margin-top: 0.5rem;
+  }
+
+  .booking-cta {
+    width: 100%;
+    padding: 1rem;
+    background: var(--terra);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .25s;
+    margin-top: 1rem;
+  }
+  .booking-cta:hover { background: var(--terra-light); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(196,96,42,0.3); }
+
+  .booking-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    margin-top: 0.7rem;
+  }
+
+  /* REVIEWS SECTION inside modal */
+  .reviews-section {
+    padding: 1.8rem 0 0;
+    border-top: 1px solid var(--sand);
+    margin-top: 1rem;
+    grid-column: 1 / -1;
+  }
+  .reviews-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .reviews-score {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .reviews-breakdown {}
+  .reviews-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+  }
+  .reviews-bar-label { font-size: 0.72rem; color: var(--warm-gray); width: 20px; text-align: right; }
+  .reviews-bar-track {
+    height: 4px;
+    background: var(--sand);
+    border-radius: 2px;
+    flex: 1;
+    max-width: 120px;
+    overflow: hidden;
+  }
+  .reviews-bar-fill {
+    height: 100%;
+    background: var(--terra);
+    border-radius: 2px;
+  }
+
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .review-item {
+    padding: 1.2rem;
+    background: var(--cream);
+    border-radius: 14px;
+  }
+  .review-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.7rem;
+  }
+  .review-item-header img {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .review-item-name { font-weight: 600; font-size: 0.85rem; }
+  .review-item-date { font-size: 0.72rem; color: var(--warm-gray); }
+  .review-item-stars { display: flex; gap: 2px; font-size: 0.75rem; margin-bottom: 0.6rem; }
+  .review-item-text { font-size: 0.82rem; line-height: 1.6; color: var(--warm-gray); font-style: italic; font-weight: 300; }
+
+  /* ===== INTERACTIVE MAP SECTION ===== */
+  .map-section {
+    padding: 5rem 4rem;
+    background: var(--white);
+  }
+
+  .map-wrapper {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--sand);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+    height: 520px;
+    margin-top: 2.5rem;
+  }
+
+  .map-sidebar {
+    background: white;
+    overflow-y: auto;
+    border-right: 1px solid var(--sand);
+  }
+  .map-sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--sand);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 2;
+  }
+  .map-sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .map-sidebar-sub { font-size: 0.78rem; color: var(--warm-gray); }
+
+  .map-exp-list { padding: 0.5rem; }
+  .map-exp-item {
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.9rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .2s;
+    margin-bottom: 0.3rem;
+    border: 1.5px solid transparent;
+  }
+  .map-exp-item:hover { background: var(--cream); }
+  .map-exp-item.selected { background: rgba(196,96,42,0.06); border-color: var(--terra); }
+  .map-exp-item img {
+    width: 64px; height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .map-exp-info {}
+  .map-exp-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.2rem; line-height: 1.3; }
+  .map-exp-loc { font-size: 0.72rem; color: var(--warm-gray); margin-bottom: 0.3rem; }
+  .map-exp-price-row { display: flex; justify-content: space-between; align-items: center; }
+  .map-exp-price { font-weight: 700; font-size: 0.85rem; color: var(--terra); }
+  .map-exp-rating { font-size: 0.72rem; display: flex; align-items: center; gap: 0.2rem; }
+
+  .map-area {
+    position: relative;
+    background: #e8e0d0;
+    overflow: hidden;
+  }
+
+  /* SVG map Italy */
+
+  /* ===== APP DOWNLOAD BANNER ===== */
+  .app-banner {
+    padding: 5rem 4rem;
+    background: linear-gradient(135deg, var(--charcoal) 0%, #2d2418 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .app-banner::before {
+    content: '';
+    position: absolute;
+    top: -100px; left: 40%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(196,96,42,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .app-banner::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: 15%;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    border: 60px solid rgba(255,255,255,0.03);
+    pointer-events: none;
+  }
+
+  .app-content {}
+  .app-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--terra-light);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .app-eyebrow::before { content: ''; width: 2rem; height: 1px; background: var(--terra-light); display: inline-block; }
+
+  .app-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 700;
+    color: white;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.2rem;
+  }
+  .app-title em { font-style: italic; color: rgba(255,255,255,0.55); }
+
+  .app-desc {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+    font-weight: 300;
+    margin-bottom: 2.2rem;
+  }
+
+  .app-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .app-store-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.85rem 1.6rem;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    text-decoration: none;
+    color: white;
+    transition: all .25s;
+  }
+  .app-store-btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+  .app-store-icon { font-size: 1.6rem; }
+  .app-store-text {}
+  .app-store-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; }
+  .app-store-name { font-weight: 600; font-size: 0.95rem; }
+
+  .app-features {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2.5rem;
+  }
+  .app-feature { display: flex; align-items: center; gap: 0.5rem; }
+  .app-feature-icon { font-size: 1rem; }
+  .app-feature-text { font-size: 0.78rem; color: rgba(255,255,255,0.45); }
+
+  .app-mockup {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 420px;
+  }
+
+  .phone-frame {
+    width: 220px;
+    height: 420px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border-radius: 40px;
+    border: 6px solid #333;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    z-index: 2;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: var(--cream);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .phone-notch {
+    width: 80px; height: 20px;
+    background: #1a1a1a;
+    border-radius: 0 0 14px 14px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  .phone-screen-content {
+    padding: 0.5rem;
+    flex: 1;
+  }
+  .phone-hero-img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 14px;
+  }
+  .phone-card {
+    background: white;
+    border-radius: 12px;
+    padding: 0.7rem;
+    margin-top: 0.5rem;
+    border: 1px solid var(--sand);
+  }
+  .phone-card-title { font-size: 0.6rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .phone-card-meta { font-size: 0.52rem; color: var(--warm-gray); display: flex; gap: 0.5rem; }
+  .phone-card-price { font-size: 0.65rem; font-weight: 700; color: var(--terra); margin-top: 0.25rem; }
+  .phone-bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 0.6rem;
+    border-top: 1px solid var(--sand);
+    background: white;
+    font-size: 1rem;
+  }
+  .phone-float {
+    position: absolute;
+    right: -30px;
+    top: 60px;
+    width: 180px;
+    background: white;
+    border-radius: 18px;
+    padding: 1rem;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    z-index: 3;
+  }
+  .phone-float-title { font-size: 0.7rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--charcoal); }
+  .phone-float-row { display: flex; align-items: center; gap: 0.5rem; }
+  .phone-float-img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+  .phone-float-info { font-size: 0.58rem; color: var(--charcoal); font-weight: 500; }
+  .phone-float-sub { font-size: 0.52rem; color: var(--warm-gray); }
+
+  /* ===== NEWSLETTER ===== */
+  .newsletter {
+    padding: 5rem 4rem;
+    background: var(--sand);
+    position: relative;
+    overflow: hidden;
+  }
+  .newsletter::before {
+    content: '✉';
+    position: absolute;
+    right: 6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20rem;
+    opacity: 0.03;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .newsletter-inner {
+    max-width: 620px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .newsletter-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--terra);
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.8rem;
+    line-height: 1.1;
+  }
+  .newsletter-title em { font-style: italic; color: var(--terra); }
+
+  .newsletter-sub {
+    font-size: 1rem;
+    color: var(--warm-gray);
+    line-height: 1.6;
+    margin-bottom: 2.2rem;
+    font-weight: 300;
+  }
+
+  .newsletter-form {
+    display: flex;
+    gap: 0;
+    background: white;
+    border-radius: 100px;
+    border: 1.5px solid var(--sand);
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    max-width: 460px;
+    margin: 0 auto 1.2rem;
+    transition: box-shadow .3s, border-color .3s;
+  }
+  .newsletter-form:focus-within {
+    box-shadow: 0 8px 30px rgba(196,96,42,0.15);
+    border-color: var(--terra);
+  }
+  .newsletter-input {
+    flex: 1;
+    padding: 1rem 1.6rem;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    background: transparent;
+    color: var(--charcoal);
+  }
+  .newsletter-btn {
+    padding: 0.75rem 1.8rem;
+    background: var(--terra);
+    color: white;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    margin: 5px;
+    border-radius: 100px;
+  }
+  .newsletter-btn:hover { background: var(--terra-light); }
+
+  .newsletter-note {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+  }
+  .newsletter-note a { color: var(--terra); text-decoration: none; }
+  .newsletter-tags {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+  }
+  .nl-tag {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.9rem;
+    background: rgba(196,96,42,0.08);
+    border-radius: 100px;
+    color: var(--terra);
+    border: 1px solid rgba(196,96,42,0.2);
+  }
+
+  /* TRUST BAR */
+  .trust-bar {
+    background: var(--moss);
+    padding: 1.5rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+  }
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: white;
+  }
+  .trust-item-icon { font-size: 1.3rem; }
+  .trust-item-text { font-size: 0.82rem; opacity: 0.8; font-weight: 300; }
+  .trust-item-text strong { font-weight: 600; opacity: 1; color: white; }
+  .trust-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.15); }
+
+  /* ============================================
+     BURGER + MENU MOBILE
+     ============================================ */
+  .burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 42px; height: 42px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 120;
+  }
+  .burger span {
+    display: block;
+    width: 22px; height: 2px;
+    background: var(--charcoal);
+    border-radius: 2px;
+    margin: 0 auto;
+    transition: transform .3s ease, opacity .25s ease;
+  }
+  .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .burger.open span:nth-child(2) { opacity: 0; }
+  .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .nav-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(28,28,28,0.45);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    z-index: 90;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .nav-backdrop.show { display: block; opacity: 1; }
+
+  /* ============================================
+     RESPONSIVE — TABLET GRANDE  (max 1100px)
+     ============================================ */
+  @media (max-width: 1100px) {
+    nav { padding: 1rem 2rem; }
+    .nav-links { gap: 1.6rem; }
+
+    .hero-left { padding: 9rem 2rem 4rem; }
+    .hero-stats { gap: 2rem; margin-top: 3rem; }
+
+    .search-section,
+    .categories,
+    .featured,
+    .guides,
+    .destinations,
+    .testimonials,
+    .trending,
+    .map-section,
+    .newsletter { padding-left: 2rem; padding-right: 2rem; }
+
+    .how { padding: 5rem 2rem; }
+    .how-grid { gap: 3rem; }
+
+    .become-guide { padding: 5rem 2rem; gap: 3rem; }
+    .app-banner { padding: 4rem 2rem; gap: 3rem; }
+    .trust-bar { padding: 1.5rem 2rem; flex-wrap: wrap; gap: 1.2rem; justify-content: flex-start; }
+    .trust-divider { display: none; }
+    footer { padding: 3rem 2rem 2rem; }
+
+    .cat-grid { grid-template-columns: repeat(3, 1fr); }
+    .guides-grid { grid-template-columns: repeat(2, 1fr); }
+    .trending-grid { grid-template-columns: repeat(3, 1fr); }
+    .footer-top { grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand { grid-column: 1 / -1; }
+  }
+
+  /* ============================================
+     RESPONSIVE — TABLET  (max 900px)
+     ============================================ */
+  /* La X di chiusura resta ancorata al viewport mentre il contenuto scorre.
+     L'overlay è già position:fixed, quindi un figlio fixed si ancora allo schermo. */
+  @media (max-width: 900px) {
+    /* Tre cose staccano un figlio position:fixed dal viewport e lo legano
+       all'antenato: transform, backdrop-filter e overflow:clip. Qui vanno
+       eliminate tutte, altrimenti la X scorre via col contenuto.
+       Attenzione: 'animation: fadeUp ... both' lascia applicato
+       transform:translateY(0) anche a animazione finita — vale come transform. */
+    .exp-detail-overlay {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: rgba(0, 0, 0, 0.78);
+    }
+    .exp-detail {
+      animation: fadeOnly .3s ease both;   /* sola opacità, nessun transform */
+    }
+    .exp-detail-close {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 0.9rem);
+      right: 0.9rem;
+      z-index: 20;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    }
+  }
+
+  @media (max-width: 900px) {
+    /* Nav mobile */
+    .burger { display: flex; }
+
+    .nav-links {
+      position: fixed;
+      top: 0; right: 0;
+      height: 100vh;
+      width: min(80vw, 320px);
+      background: var(--cream);
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0;
+      padding: 6rem 2rem 2rem;
+      transform: translateX(100%);
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+      box-shadow: -10px 0 40px rgba(0,0,0,0.12);
+      z-index: 100;
+    }
+    .nav-links.open { transform: translateX(0); }
+    .nav-links li { width: 100%; border-bottom: 1px solid var(--sand); }
+    .nav-links a {
+      display: block;
+      padding: 1.1rem 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--charcoal);
+      font-weight: 500;
+    }
+
+    .nav-cta { margin-left: auto; margin-right: 0.6rem; }
+    #navGuest .btn-ghost { display: none; }
+    .user-chip-name { display: none; }
+    .user-chip { padding: 0.3rem; }
+    .user-menu { right: 0; }
+
+    /* Hero a colonna singola */
+    .hero {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+    .hero-left { padding: 8rem 2rem 3rem; }
+    .hero-title { font-size: clamp(2.4rem, 9vw, 3.6rem); }
+    .hero-sub { max-width: 100%; }
+    .hero-right { height: 55vw; min-height: 300px; max-height: 420px; }
+
+    /* Ricerca: da barra a blocco */
+    .search-bar {
+      flex-direction: column;
+      border-radius: 20px;
+      padding: 0.4rem;
+    }
+    .search-field {
+      border-right: none !important;
+      border-bottom: 1px solid var(--sand);
+      max-width: none !important;
+      padding: 0.9rem 1.2rem;
+    }
+    .search-field:last-of-type { border-bottom: none; }
+    .search-btn {
+      width: 100%;
+      padding: 0.95rem;
+      justify-content: center;
+      margin: 0.4rem 0 0;
+    }
+
+    /* Sezioni */
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .exp-grid { grid-template-columns: repeat(2, 1fr); }
+    .exp-card.featured-large { grid-column: span 2; grid-row: auto; }
+    .exp-card.featured-large .exp-img { min-height: 260px; height: 260px; }
+    .exp-card.featured-large .exp-title { font-size: 1.3rem; }
+
+    .how-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .become-guide { grid-template-columns: 1fr; gap: 2.5rem; }
+    .app-banner { grid-template-columns: 1fr; gap: 3rem; }
+    .app-mockup { height: auto; padding-top: 1rem; }
+
+    .dest-grid { grid-template-columns: repeat(2, 1fr); }
+    .dest-card:first-child { grid-row: auto; height: 250px; }
+    .dest-card:first-child .dest-name { font-size: 1.6rem; }
+
+    .test-grid { grid-template-columns: 1fr; }
+
+    /* Mappa: sidebar sopra, mappa sotto */
+    .map-wrapper {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .map-sidebar {
+      border-right: none;
+      border-bottom: 1px solid var(--sand);
+      max-height: 260px;
+    }
+    .map-area { height: 360px; }
+
+    /* Modal dettaglio esperienza */
+    .exp-detail-overlay { padding: 0; }
+    .exp-detail { border-radius: 0; min-height: 100vh; }
+    .exp-detail-gallery {
+      grid-template-columns: 1fr;
+      grid-template-rows: 240px;
+      height: 240px;
+    }
+    .exp-detail-gallery > div:not(.gal-main) { display: none; }
+    .exp-detail-gallery .gal-main { grid-row: auto; }
+    .exp-detail-body {
+      grid-template-columns: 1fr;
+      padding: 2rem 1.5rem 3rem;
+      gap: 2rem;
+    }
+    .booking-widget { position: static; }
+    .reviews-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================
+     RESPONSIVE — MOBILE  (max 640px)
+     ============================================ */
+  @media (max-width: 640px) {
+    nav { padding: 0.9rem 1.2rem; }
+    .logo { font-size: 1.35rem; }
+
+    .hero-left { padding: 7rem 1.2rem 2.5rem; }
+    .hero-title { font-size: clamp(2.1rem, 10vw, 3rem); }
+    .hero-sub { font-size: 1rem; margin-bottom: 2rem; }
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .btn-large, .btn-outline-large { text-align: center; padding: 0.95rem 1.5rem; }
+    .hero-stats { gap: 1.5rem; flex-wrap: wrap; margin-top: 2.5rem; }
+    .stat-number { font-size: 1.5rem; }
+    .stat-label { font-size: 0.68rem; }
+    .hero-right { height: 70vw; }
+
+    .search-section,
+    .categories,
+    .featured,
+    .guides,
+    .destinations,
+    .testimonials,
+    .trending,
+    .map-section,
+    .newsletter { padding-left: 1.2rem; padding-right: 1.2rem; }
+    .search-section { padding-top: 2rem; padding-bottom: 2rem; }
+    .categories, .featured, .guides, .destinations, .trending, .map-section { padding-top: 3.5rem; padding-bottom: 3.5rem; }
+    .testimonials, .newsletter { padding-top: 3.5rem; padding-bottom: 3.5rem; }
+    .how { padding: 4rem 1.2rem; }
+    .become-guide { padding: 4rem 1.2rem; }
+    .app-banner { padding: 3.5rem 1.2rem; }
+    .trust-bar { padding: 1.2rem; }
+    footer { padding: 2.5rem 1.2rem 1.5rem; }
+
+    .section-title { font-size: 1.9rem; }
+    .search-label { font-size: 1.3rem; }
+
+    /* Griglie a 1-2 colonne */
+    .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+    .cat-img { height: 100px; }
+    .cat-body { padding: 0.8rem 0.9rem; }
+    .cat-name { font-size: 0.82rem; }
+    .cat-count { font-size: 0.7rem; }
+
+    .exp-grid { grid-template-columns: 1fr; gap: 1.2rem; }
+    .exp-card.featured-large { grid-column: auto; }
+    .exp-card.featured-large .exp-img { min-height: 220px; height: 220px; }
+    .exp-card.featured-large .exp-title { font-size: 1.15rem; }
+    .exp-meta { flex-wrap: wrap; gap: 0.6rem; }
+
+    .guides-grid { grid-template-columns: 1fr; }
+    .trending-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .dest-grid { grid-template-columns: 1fr; }
+    .dest-card, .dest-card:first-child { height: 200px; }
+
+    /* Filtri scorrevoli in orizzontale */
+    .filter-bar {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-left: -1.2rem;
+      margin-right: -1.2rem;
+      padding-left: 1.2rem;
+      padding-right: 1.2rem;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn { flex-shrink: 0; }
+
+    .search-tags {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.4rem;
+      scrollbar-width: none;
+    }
+    .search-tags::-webkit-scrollbar { display: none; }
+    .tag { flex-shrink: 0; }
+
+    .how-card-img { height: 200px; }
+    .step { padding: 1.5rem 0; gap: 1.2rem; }
+    .step-num { width: 38px; height: 38px; font-size: 0.9rem; }
+
+    .become-guide-title, .app-title, .newsletter-title { font-size: 1.9rem; }
+    .perk { padding: 1rem 1.2rem; }
+
+    .app-features { flex-direction: column; gap: 0.8rem; }
+    .app-buttons { flex-direction: column; }
+    .app-store-btn { justify-content: center; }
+    .phone-float { right: -10px; width: 155px; }
+
+    .trust-bar { flex-direction: column; align-items: flex-start; gap: 0.9rem; }
+
+    /* Newsletter form verticale */
+    .newsletter-form {
+      flex-direction: column;
+      border-radius: 18px;
+      padding: 0.4rem;
+    }
+    .newsletter-input { text-align: center; }
+    .newsletter-btn { width: 100%; margin: 0.3rem 0 0; padding: 0.9rem; }
+
+    .footer-top { grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .footer-brand { grid-column: 1 / -1; }
+    .footer-bottom { flex-direction: column; gap: 1.2rem; text-align: center; }
+
+    /* Modal auth a tutto schermo */
+    .modal-overlay { align-items: flex-end; }
+    .modal {
+      width: 100%;
+      max-width: none;
+      border-radius: 24px 24px 0 0;
+      padding: 2.2rem 1.5rem 2rem;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-title { font-size: 1.5rem; }
+
+    .exp-detail-title { font-size: 1.4rem; }
+    .exp-detail-meta { flex-wrap: wrap; gap: 1rem; }
+    .includes-list { grid-template-columns: 1fr; }
+    .reviews-score { font-size: 2.6rem; }
+  }
+
+  /* ============================================
+     TOUCH — niente cursore custom
+     ============================================ */
+  @media (hover: none), (pointer: coarse) {
+    body { cursor: auto; }
+    .cursor, .cursor-ring { display: none !important; }
+  }
+
+  /* Fallback: se il JS non parte, il cursore resta visibile */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      transition-duration: .01ms !important;
+    }
+    .reveal { opacity: 1; transform: none; }
+  }
+
+  /* ===== PANNELLO ACCOUNT (prenotazioni / preferiti) ===== */
+  .panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    z-index: 350;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .panel-overlay.active { display: flex; }
+
+  .panel {
+    background: var(--cream);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeUp .35s ease both;
+  }
+  .panel-head {
+    padding: 1.8rem 2rem 0;
+    position: relative;
+  }
+  .panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.2rem;
+  }
+  .panel-tabs {
+    display: flex;
+    gap: 1.5rem;
+    border-bottom: 1px solid var(--sand);
+  }
+  .panel-tab {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--warm-gray);
+    padding: 0 0 0.9rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .2s, border-color .2s;
+  }
+  .panel-tab.active { color: var(--terra); border-bottom-color: var(--terra); }
+
+  .panel-body {
+    padding: 1.5rem 2rem 2rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .panel-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--warm-gray);
+  }
+  .panel-empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.4; }
+  .panel-empty-text { font-size: 0.92rem; line-height: 1.6; }
+
+  .booking-item {
+    display: flex;
+    gap: 1rem;
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    align-items: center;
+  }
+  .booking-item-info { flex: 1; min-width: 0; }
+  .booking-item-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 0.25rem;
+  }
+  .booking-item-meta {
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .booking-item-total {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+  .booking-item-actions { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-end; }
+  .booking-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.22rem 0.6rem;
+    border-radius: 100px;
+    background: rgba(61,90,62,0.12);
+    color: var(--moss);
+  }
+  .booking-badge.cancelled { background: rgba(138,127,114,0.15); color: var(--warm-gray); }
+  .btn-cancel {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    color: var(--terra);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .btn-cancel:hover { opacity: 0.7; }
+
+  .fav-item {
+    display: flex;
+    gap: 1rem;
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.8rem;
+    align-items: center;
+  }
+  .fav-item-info { flex: 1; }
+  .fav-item-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+  .fav-item-city { font-size: 0.78rem; color: var(--warm-gray); }
+  .fav-item-price { font-weight: 700; color: var(--terra); font-size: 0.92rem; }
+
+  .panel-loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--warm-gray);
+    font-size: 0.88rem;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    background: var(--charcoal);
+    color: white;
+    padding: 0.9rem 1.5rem;
+    border-radius: 100px;
+    font-size: 0.87rem;
+    font-weight: 500;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    z-index: 500;
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    max-width: calc(100vw - 2.4rem);
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ok { background: var(--moss); }
+
+  @media (max-width: 640px) {
+    .panel-overlay { padding: 0; align-items: flex-end; }
+    .panel { max-width: none; border-radius: 24px 24px 0 0; max-height: 90vh; }
+    .panel-head { padding: 1.5rem 1.2rem 0; }
+    .panel-body { padding: 1.2rem 1.2rem 2rem; }
+    .booking-item, .fav-item { flex-wrap: wrap; }
+    .booking-item-actions { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
+  }
+
+  /* ===== MODULO PUBBLICAZIONE ===== */
+  .modal-wide { max-width: 560px; max-height: 90vh; overflow-y: auto; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.6;
+  }
+  .form-hint {
+    font-size: 0.72rem;
+    color: var(--warm-gray);
+    margin-top: 0.3rem;
+  }
+  select.form-input { appearance: none; cursor: pointer; }
+
+  /* Stato vuoto delle sezioni */
+  .vuoto {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    border: 1px dashed var(--sand);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.4);
+  }
+  .vuoto-icona { font-size: 2.2rem; opacity: 0.35; margin-bottom: 0.8rem; }
+  .vuoto-titolo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+  .vuoto-testo {
+    font-size: 0.9rem;
+    color: var(--warm-gray);
+    line-height: 1.6;
+    max-width: 380px;
+    margin: 0 auto 1.2rem;
+  }
+  .vuoto .btn-primary { display: inline-block; }
+
+  .card-azioni {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.7rem 1.2rem 1rem;
+    border-top: 1px solid var(--sand);
+  }
+  .card-azione {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .card-azione.danger { color: var(--terra); }
+
+  @media (max-width: 640px) {
+    .form-row, .form-row-3 { grid-template-columns: 1fr; gap: 0; }
+    .modal-wide { max-height: 92vh; }
+  }
+
+  /* ===== AUTOCOMPLETAMENTO LUOGHI ===== */
+  .ac-wrap { position: relative; }
+
+  .ac-list {
+    list-style: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: white;
+    border: 1.5px solid var(--sand);
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.13);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 60;
+    display: none;
+    padding: 0.3rem;
+  }
+  .ac-list.open { display: block; }
+
+  .ac-item {
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    transition: background .12s;
+  }
+  .ac-item:hover, .ac-item.attivo { background: var(--cream); }
+
+  .ac-item-icona { font-size: 0.95rem; opacity: 0.55; line-height: 1.4; }
+  .ac-item-testo { min-width: 0; }
+  .ac-item-nome {
+    font-size: 0.87rem;
+    font-weight: 600;
+    color: var(--charcoal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ac-item-dettaglio {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ac-vuoto {
+    padding: 0.9rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--warm-gray);
+    text-align: center;
+  }
+
+  .ac-spinner {
+    position: absolute;
+    right: 0.9rem; top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    border: 2px solid var(--sand);
+    border-top-color: var(--terra);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  .ac-spinner.attivo { display: block; }
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">Local<span>Guide</span></a>
+  <button class="burger" id="burger" aria-label="Apri menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#esperienze">Esperienze</a></li>
+    <li><a href="#guide">Guide</a></li>
+    <li><a href="#destinazioni">Destinazioni</a></li>
+    <li><a href="#come-funziona">Come funziona</a></li>
+  </ul>
+
+  <!-- Stato: NON loggato -->
+  <div class="nav-cta" id="navGuest">
+    <a href="#" class="btn-ghost" id="navLoginBtn">Accedi</a>
+    <a href="#" class="btn-primary" id="navSignupBtn">Registrati</a>
+  </div>
+
+  <!-- Stato: LOGGATO -->
+  <div class="nav-cta" id="navUser" style="display:none">
+    <button class="user-chip" id="userChip">
+      <img class="user-chip-avatar" id="userAvatar" src="" alt="Il tuo avatar">
+      <span class="user-chip-name" id="userName">Utente</span>
+      <span class="user-chip-caret">▾</span>
+    </button>
+    <div class="user-menu" id="userMenu">
+      <div class="user-menu-header">
+        <img class="user-menu-avatar" id="userMenuAvatar" src="" alt="Il tuo avatar">
+        <div>
+          <div class="user-menu-name" id="userMenuName">Utente</div>
+          <div class="user-menu-email" id="userMenuEmail">—</div>
+        </div>
+      </div>
+      <a href="#" class="user-menu-item">🎫 Le mie prenotazioni</a>
+      <a href="#" class="user-menu-item">❤️ Preferiti</a>
+      <a href="#" class="user-menu-item">👤 Profilo</a>
+      <a href="#" class="user-menu-item">🧭 Diventa guida</a>
+      <div class="user-menu-divider"></div>
+      <a href="#" class="user-menu-item danger" id="btnLogout">↩ Esci</a>
+    </div>
+  </div>
+</nav>
+<div class="nav-backdrop" id="navBackdrop"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Esperienze locali autentiche</div>
+    <h1 class="hero-title">
+      Viaggia con<br>
+      chi la città<br>
+      <em>la conosce</em><br>
+      davvero
+    </h1>
+    <p class="hero-sub">
+      Non le solite visite guidate. Persone vere che condividono la loro città, la loro cucina, la loro passione. Un'esperienza che ricorderai per sempre.
+    </p>
+    <div class="hero-actions">
+      <a href="#esperienze" class="btn-large">Scopri le esperienze</a>
+      <a href="#come-funziona" class="btn-outline-large">Come funziona</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-number" id="statEsperienze">0</div>
+        <div class="stat-label">Esperienze</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="statGuide">0</div>
+        <div class="stat-label">Guide locali</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="statCitta">0</div>
+        <div class="stat-label">Città</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-grid">
+      <div class="hero-img" style="grid-column: 1; grid-row: 1;">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80" alt="Cucina locale">
+        <div class="hero-img-overlay">🍝 Cucina napoletana</div>
+      </div>
+      <div class="hero-img" style="grid-column: 2; grid-row: 1;">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Trekking">
+        <div class="hero-img-overlay">🏔️ Dolomiti segrete</div>
+      </div>
+      <div class="hero-img" style="grid-column: 1; grid-row: 2;">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=600&q=80" alt="Arte di strada">
+        <div class="hero-img-overlay">🎨 Street art Roma</div>
+      </div>
+      <div class="hero-img" style="grid-column: 2; grid-row: 2;">
+        <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80" alt="Degustazione vini">
+        <div class="hero-img-overlay">🍷 Vini toscani</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEARCH -->
+<section class="search-section">
+  <div class="search-container">
+    <p class="search-label">Cosa vuoi scoprire oggi?</p>
+    <div class="search-bar">
+      <div class="search-field">
+        <span class="search-field-icon">📍</span>
+        <div class="search-field-content">
+          <span class="search-field-label">Dove</span>
+          <input type="text" placeholder="Città o destinazione...">
+        </div>
+      </div>
+      <div class="search-field">
+        <span class="search-field-icon">🧭</span>
+        <div class="search-field-content">
+          <span class="search-field-label">Tipo di esperienza</span>
+          <select>
+            <option>Tutte le esperienze</option>
+            <option>Cucina locale</option>
+            <option>Arte e cultura</option>
+            <option>Avventura</option>
+            <option>Tour a piedi</option>
+            <option>Musica e nightlife</option>
+          </select>
+        </div>
+      </div>
+      <div class="search-field">
+        <span class="search-field-icon">📅</span>
+        <div class="search-field-content">
+          <span class="search-field-label">Quando</span>
+          <input type="date">
+        </div>
+      </div>
+      <div class="search-field" style="max-width: 140px; border-right: none;">
+        <span class="search-field-icon">👥</span>
+        <div class="search-field-content">
+          <span class="search-field-label">Persone</span>
+          <input type="number" placeholder="2" min="1" max="20">
+        </div>
+      </div>
+      <button class="search-btn">
+        <span>🔍</span> Cerca
+      </button>
+    </div>
+    <div class="search-tags">
+      <span>Tendenze:</span>
+      <span class="tag">🍕 Street food</span>
+      <span class="tag">🏛️ Musei nascosti</span>
+      <span class="tag">🌿 Natura</span>
+      <span class="tag">📸 Fotografia</span>
+      <span class="tag">🎭 Teatro</span>
+      <span class="tag">🏄 Sport acquatici</span>
+      <span class="tag">🌙 Vita notturna</span>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="categories" id="esperienze">
+  <div class="section-header reveal">
+    <h2 class="section-title">Esplora per<br><em>categoria</em></h2>
+    <a href="#" class="section-link">Vedi tutte →</a>
+  </div>
+  <div class="cat-grid reveal">
+    <div class="cat-card" data-cat="cucina">
+      <div class="cat-img">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80" alt="Cucina">
+      </div>
+      <div class="cat-body">
+        <div class="cat-icon">🍳</div>
+        <div class="cat-name">Cucina locale</div>
+        <div class="cat-count" data-conta="">—</div>
+      </div>
+    </div>
+    <div class="cat-card" data-cat="arte">
+      <div class="cat-img">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&q=80" alt="Arte">
+      </div>
+      <div class="cat-body">
+        <div class="cat-icon">🎨</div>
+        <div class="cat-name">Arte e cultura</div>
+        <div class="cat-count" data-conta="">—</div>
+      </div>
+    </div>
+    <div class="cat-card" data-cat="avventura">
+      <div class="cat-img">
+        <img src="https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=400&q=80" alt="Avventura">
+      </div>
+      <div class="cat-body">
+        <div class="cat-icon">🏔️</div>
+        <div class="cat-name">Avventura</div>
+        <div class="cat-count" data-conta="">—</div>
+      </div>
+    </div>
+    <div class="cat-card" data-cat="vino">
+      <div class="cat-img">
+        <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="Gastronomia">
+      </div>
+      <div class="cat-body">
+        <div class="cat-icon">🍷</div>
+        <div class="cat-name">Enogastronomia</div>
+        <div class="cat-count" data-conta="">—</div>
+      </div>
+    </div>
+    <div class="cat-card" data-cat="musica">
+      <div class="cat-img">
+        <img loading="lazy" src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&q=80" alt="Musica">
+      </div>
+      <div class="cat-body">
+        <div class="cat-icon">🎵</div>
+        <div class="cat-name">Musica live</div>
+        <div class="cat-count" data-conta="">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ESPERIENZE IN EVIDENZA -->
+<section class="featured">
+  <div class="section-header reveal">
+    <h2 class="section-title">Esperienze<br><em>in evidenza</em></h2>
+    <a href="#" class="section-link" id="linkPubblica1">Pubblica la tua →</a>
+  </div>
+  <div class="exp-grid" id="grigliaEvidenza"></div>
+</section>
+
+<!-- GUIDE -->
+<section class="guides" id="guide">
+  <div class="section-header reveal">
+    <h2 class="section-title">Le nostre<br><em>guide</em></h2>
+    <a href="#" class="section-link" id="linkPubblica2">Diventa guida →</a>
+  </div>
+  <div class="guides-grid" id="grigliaGuide"></div>
+</section>
+
+<!-- DESTINATIONS -->
+<section class="destinations" id="destinazioni">
+  <div class="section-header reveal">
+    <h2 class="section-title">Destinazioni<br><em>popolari</em></h2>
+    <a href="#" class="section-link">Esplora il mondo →</a>
+  </div>
+  <div class="dest-grid reveal">
+    <div class="dest-card">
+      <img loading="lazy" src="https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800&q=80" alt="Roma">
+      <div class="dest-overlay">
+        <div class="dest-name" data-citta="Roma">Roma</div>
+        <div class="dest-count">—</div>
+      </div>
+    </div>
+    <div class="dest-card">
+      <img loading="lazy" src="https://images.unsplash.com/photo-1513581166391-887a96ddeafd?w=600&q=80" alt="Venezia">
+      <div class="dest-overlay">
+        <div class="dest-name" data-citta="Venezia">Venezia</div>
+        <div class="dest-count">—</div>
+      </div>
+    </div>
+    <div class="dest-card">
+      <img loading="lazy" src="https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=600&q=80" alt="Sicilia">
+      <div class="dest-overlay">
+        <div class="dest-name" data-citta="Sicilia">Sicilia</div>
+        <div class="dest-count">—</div>
+      </div>
+    </div>
+    <div class="dest-card">
+      <img loading="lazy" src="https://images.unsplash.com/photo-1541332417810-3a47d1a62413?w=600&q=80" alt="Milano">
+      <div class="dest-overlay">
+        <div class="dest-name" data-citta="Milano">Milano</div>
+        <div class="dest-count">—</div>
+      </div>
+    </div>
+    <div class="dest-card">
+      <img src="https://images.unsplash.com/photo-1499678329028-101435549a4e?w=600&q=80" alt="Amalfi">
+      <div class="dest-overlay">
+        <div class="dest-name" data-citta="Costa Amalfitana">Costa Amalfitana</div>
+        <div class="dest-count">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COME NASCE UN'ESPERIENZA -->
+<section class="testimonials">
+  <div class="section-header reveal">
+    <h2 class="section-title">Cosa rende<br><em>un'esperienza</em></h2>
+  </div>
+  <div class="test-grid reveal">
+    <div class="test-card">
+      <div class="test-quote">"</div>
+      <p class="test-text">Qualcosa che sai fare davvero. Una ricetta di famiglia, un sentiero che conosci a memoria, un mestiere che pratichi da anni.</p>
+      <div class="test-author"><div><div class="test-author-name">Competenza vera</div>
+      <div class="test-author-info">Non serve essere guide professioniste</div></div></div>
+    </div>
+    <div class="test-card">
+      <div class="test-quote">"</div>
+      <p class="test-text">Gruppi piccoli. Più di dieci persone e smette di essere un incontro: diventa una visita guidata come tante.</p>
+      <div class="test-author"><div><div class="test-author-name">Poche persone</div>
+      <div class="test-author-info">La differenza si sente</div></div></div>
+    </div>
+    <div class="test-card">
+      <div class="test-quote">"</div>
+      <p class="test-text">Un luogo che non sta sulle guide. Il cortile, la bottega, la cantina: posti dove si entra solo se qualcuno ti accompagna.</p>
+      <div class="test-author"><div><div class="test-author-name">Luoghi veri</div>
+      <div class="test-author-info">Fuori dai percorsi turistici</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- BECOME A GUIDE -->
+<section class="become-guide">
+  <div class="become-guide-content reveal">
+    <div class="become-guide-eyebrow">Per le guide locali</div>
+    <h2 class="become-guide-title">Trasforma la tua<br>passione in<br><em>guadagno</em></h2>
+    <p class="become-guide-desc">Sei del posto? Conosci angoli nascosti, ricette di famiglia, storie dimenticate? Diventa guida LocalGuide e condividi quello che ami, guadagnando in modo flessibile.</p>
+    <a href="#" class="btn-white" onclick="apriPubblica(); return false;">Pubblica la tua esperienza</a>
+  </div>
+  <div class="become-guide-perks reveal">
+    <div class="perk">
+      <div class="perk-icon">💰</div>
+      <div>
+        <div class="perk-title">Decidi tu quanto vale</div>
+        <div class="perk-desc">Imposti il prezzo della tua esperienza e il numero di posti. Nessun minimo imposto.</div>
+      </div>
+    </div>
+    <div class="perk">
+      <div class="perk-icon">🔒</div>
+      <div>
+        <div class="perk-title">Pagamenti garantiti e sicuri</div>
+        <div class="perk-desc">Ricevi il pagamento 24h dopo ogni esperienza, direttamente sul tuo conto. Nessun rischio.</div>
+      </div>
+    </div>
+    <div class="perk">
+      <div class="perk-icon">🗓️</div>
+      <div>
+        <div class="perk-title">Orari totalmente flessibili</div>
+        <div class="perk-desc">Decidi tu quando essere disponibile. Non ci sono obblighi, minimi o massimi. Totale libertà.</div>
+      </div>
+    </div>
+    <div class="perk">
+      <div class="perk-icon">🌍</div>
+      <div>
+        <div class="perk-title">Raggiungi viaggiatori da tutto il mondo</div>
+        <div class="perk-desc">La tua esperienza è visibile a chiunque cerchi qualcosa di autentico nella tua zona.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPERIENCE DETAIL MODAL -->
+<div class="exp-detail-overlay" id="expDetailOverlay">
+  <div class="exp-detail">
+    <button class="exp-detail-close" onclick="closeExpDetail()" aria-label="Chiudi">✕</button>
+    <div class="exp-detail-gallery">
+      <div class="gal-main"><img id="dImg0" src="" alt=""></div>
+      <div><img id="dImg1" src="" alt=""></div>
+      <div><img id="dImg2" src="" alt=""></div>
+    </div>
+    <div class="exp-detail-body">
+      <div class="exp-detail-main">
+        <div class="exp-detail-location" id="dLuogo"></div>
+        <h2 class="exp-detail-title" id="dTitolo"></h2>
+        <div class="exp-detail-meta">
+          <div class="exp-detail-meta-item">
+            <span class="exp-detail-meta-label">Durata</span>
+            <span class="exp-detail-meta-val" id="dDurata"></span>
+          </div>
+          <div class="exp-detail-meta-item">
+            <span class="exp-detail-meta-label">Gruppo</span>
+            <span class="exp-detail-meta-val" id="dGruppo"></span>
+          </div>
+          <div class="exp-detail-meta-item">
+            <span class="exp-detail-meta-label">Lingue</span>
+            <span class="exp-detail-meta-val" id="dLingue"></span>
+          </div>
+          <div class="exp-detail-meta-item">
+            <span class="exp-detail-meta-label">Età minima</span>
+            <span class="exp-detail-meta-val" id="dEta"></span>
+          </div>
+        </div>
+        <p class="exp-detail-desc" id="dDescrizione"></p>
+        <div class="exp-detail-includes">
+          <div class="exp-detail-includes-title">Cosa è incluso</div>
+          <ul class="includes-list" id="dIncluso"></ul>
+        </div>
+        <div class="exp-detail-guide">
+          <img id="dGuidaFoto" src="" alt="">
+          <div>
+            <div class="exp-detail-guide-name" id="dGuidaNome"></div>
+            <div class="exp-detail-guide-sub" id="dGuidaSub"></div>
+          </div>
+        </div>
+
+        <div class="reviews-section">
+          <div class="reviews-header">
+            <div class="reviews-score" id="dRating"></div>
+            <div>
+              <div style="display:flex;gap:2px;margin-bottom:0.5rem">
+                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+              </div>
+              <div class="reviews-breakdown">
+                <div class="reviews-bar-row"><span class="reviews-bar-label">5</span><div class="reviews-bar-track"><div class="reviews-bar-fill" style="width:94%"></div></div></div>
+                <div class="reviews-bar-row"><span class="reviews-bar-label">4</span><div class="reviews-bar-track"><div class="reviews-bar-fill" style="width:5%"></div></div></div>
+                <div class="reviews-bar-row"><span class="reviews-bar-label">3</span><div class="reviews-bar-track"><div class="reviews-bar-fill" style="width:1%"></div></div></div>
+              </div>
+              <div style="font-size:0.75rem;color:var(--warm-gray);margin-top:0.3rem" id="dNRecensioni"></div>
+            </div>
+          </div>
+          <div class="reviews-grid" id="dRecensioni"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="booking-widget">
+          <div class="booking-price-row">
+            <div class="booking-price" id="dPrezzo"></div>
+            <div class="booking-rating"><span class="star">★</span> <span id="dRating2"></span></div>
+          </div>
+          <div class="booking-row">
+            <div class="booking-input-wrap">
+              <span class="booking-input-label">Data</span>
+              <input class="booking-input" type="date" id="bookingDate">
+            </div>
+            <div class="booking-input-wrap">
+              <span class="booking-input-label">Orario</span>
+              <select class="booking-input" style="appearance:none" id="bookingTime"></select>
+            </div>
+          </div>
+          <div class="booking-field">
+            <span class="booking-input-label">Partecipanti</span>
+            <input class="booking-input" type="number" value="2" min="1" id="bookingGuests" oninput="updateBooking()">
+          </div>
+          <div class="booking-breakdown">
+            <div class="booking-line"><span id="bookingLineLabel"></span><span id="bookingLineTotal"></span></div>
+            <div class="booking-line"><span>Commissione servizio</span><span id="bookingFee"></span></div>
+            <div class="booking-line total"><span>Totale</span><span id="bookingGrandTotal"></span></div>
+          </div>
+          <button class="booking-cta" onclick="richiediLogin()">Prenota ora</button>
+          <p class="booking-note">Non ti verrà addebitato nulla ora · Cancellazione gratuita 48h prima</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TUTTE LE ESPERIENZE -->
+<section class="trending" id="tutte">
+  <div class="section-header reveal">
+    <h2 class="section-title">Tutte le<br><em>esperienze</em></h2>
+    <span class="section-link" id="contatoreEsperienze"></span>
+  </div>
+  <div class="filter-bar reveal" id="filterBar">
+    <button class="filter-btn active" data-cat="all">Tutte</button>
+    <button class="filter-btn" data-cat="cucina">🍳 Cucina</button>
+    <button class="filter-btn" data-cat="arte">🎨 Arte</button>
+    <button class="filter-btn" data-cat="avventura">🏔️ Avventura</button>
+    <button class="filter-btn" data-cat="vino">🍷 Vino &amp; Cibo</button>
+    <button class="filter-btn" data-cat="musica">🎵 Musica</button>
+    <button class="filter-btn" data-cat="tour">🗺️ Tour a piedi</button>
+  </div>
+  <div class="trending-grid" id="grigliaTutte"></div>
+</section>
+
+<!-- MAP SECTION -->
+<section class="map-section">
+  <div class="section-header reveal">
+    <h2 class="section-title">Esplora sulla<br><em>mappa</em></h2>
+    <a href="#" class="section-link">Apri mappa completa →</a>
+  </div>
+  <div class="map-wrapper reveal">
+    <div class="map-sidebar">
+      <div class="map-sidebar-header">
+        <div class="map-sidebar-title">Esperienze vicino a te</div>
+        <div class="map-sidebar-sub" id="mapSidebarSub">Nessuna esperienza</div>
+      </div>
+      <div class="map-exp-list" id="mapExpList"></div>
+    </div>
+    <div class="map-area">
+      <div id="leaflet-map" style="width:100%;height:100%;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- APP BANNER -->
+<section class="app-banner">
+  <div class="app-content reveal">
+    <div class="app-eyebrow">LocalGuide App</div>
+    <h2 class="app-title">Porta le esperienze<br><em>sempre con te</em></h2>
+    <p class="app-desc">Prenota ovunque tu sia, ricevi notifiche in tempo reale, chatta con la tua guida e salva le esperienze che ami. Disponibile gratuitamente su iOS e Android.</p>
+    <div class="app-buttons">
+      <a href="#" class="app-store-btn">
+        <div class="app-store-icon">🍎</div>
+        <div class="app-store-text">
+          <div class="app-store-label">Scarica su</div>
+          <div class="app-store-name">App Store</div>
+        </div>
+      </a>
+      <a href="#" class="app-store-btn">
+        <div class="app-store-icon">▶</div>
+        <div class="app-store-text">
+          <div class="app-store-label">Disponibile su</div>
+          <div class="app-store-name">Google Play</div>
+        </div>
+      </a>
+    </div>
+    <div class="app-features">
+      <div class="app-feature"><div class="app-feature-icon">⚡</div><div class="app-feature-text">Prenotazione istantanea</div></div>
+      <div class="app-feature"><div class="app-feature-icon">💬</div><div class="app-feature-text">Chat con le guide</div></div>
+      <div class="app-feature"><div class="app-feature-icon">🗺️</div><div class="app-feature-text">Mappa offline</div></div>
+    </div>
+  </div>
+  <div class="app-mockup reveal">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="phone-screen-content">
+          <img class="phone-hero-img" src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&q=80" alt="Esperienza locale">
+          <div style="padding:0.4rem 0 0.3rem;font-size:0.55rem;color:var(--terra);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">📍 Vicino a te</div>
+          <div class="phone-card">
+            <div class="phone-card-title">Esperienze nella tua città</div>
+            <div class="phone-card-meta"><span>⏱ Durata</span><span>👥 Posti</span></div>
+            <div class="phone-card-price">Prezzo per persona</div>
+          </div>
+          <div class="phone-card" style="margin-top:0.4rem">
+            <div class="phone-card-title">Scelte dalle guide locali</div>
+            <div class="phone-card-meta"><span>🗣 Lingue</span><span>📍 Luogo</span></div>
+            <div class="phone-card-price">Prenoti in un tocco</div>
+          </div>
+        </div>
+        <div class="phone-bottom-nav">
+          <span>🏠</span><span>🔍</span><span>❤️</span><span>👤</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone-float">
+      <div class="phone-float-title">✅ Prenotazione confermata</div>
+      <div class="phone-float-row">
+        <div class="phone-float-img" style="background:var(--terra);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem">✓</div>
+        <div>
+          <div class="phone-float-info">Ti scrive la tua guida</div>
+          <div class="phone-float-sub">Dettagli e punto d'incontro</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="trust-item">
+    <div class="trust-item-icon">🛡️</div>
+    <div class="trust-item-text"><strong>Pagamento sicuro</strong> — 100% protetto</div>
+  </div>
+  <div class="trust-divider"></div>
+  <div class="trust-item">
+    <div class="trust-item-icon">✅</div>
+    <div class="trust-item-text"><strong>Guide verificate</strong> — identità e recensioni reali</div>
+  </div>
+  <div class="trust-divider"></div>
+  <div class="trust-item">
+    <div class="trust-item-icon">🔄</div>
+    <div class="trust-item-text"><strong>Rimborso gratuito</strong> — fino a 48h prima</div>
+  </div>
+  <div class="trust-divider"></div>
+  <div class="trust-item">
+    <div class="trust-item-icon">💬</div>
+    <div class="trust-item-text"><strong>Supporto 24/7</strong> — sempre con te</div>
+  </div>
+  <div class="trust-divider"></div>
+  <div class="trust-item">
+    <div class="trust-item-icon">🤝</div>
+    <div class="trust-item-text"><strong>Gruppi piccoli</strong> — mai visite di massa</div>
+  </div>
+</div>
+
+<!-- NEWSLETTER -->
+<section class="newsletter">
+  <div class="newsletter-inner reveal">
+    <div class="newsletter-eyebrow">Per i veri viaggiatori</div>
+    <h2 class="newsletter-title">Storie, posti e<br><em>persone</em> straordinarie</h2>
+    <p class="newsletter-sub">Ogni settimana una newsletter curata: esperienze selezionate, guide del mese, destinazioni emergenti e offerte riservate agli iscritti.</p>
+    <div class="newsletter-form">
+      <input class="newsletter-input" type="email" placeholder="La tua email..." id="nlEmail">
+      <button class="newsletter-btn" onclick="subscribeNewsletter()">Iscriviti</button>
+    </div>
+    <div class="newsletter-note" id="nlNote">Nessuno spam. Solo bellezza. <a href="#">Privacy policy</a></div>
+    <div class="newsletter-tags">
+      <span class="nl-tag">🍝 Cucina</span>
+      <span class="nl-tag">🏛️ Cultura</span>
+      <span class="nl-tag">🌿 Natura</span>
+      <span class="nl-tag">🎨 Arte</span>
+      <span class="nl-tag">🍷 Vino</span>
+      <span class="nl-tag">✈️ Viaggi</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="#" class="footer-logo">Local<span>Guide</span></a>
+      <p class="footer-tagline">Connettere viaggiatori autentici con persone del posto che amano condividere la loro cultura, la loro cucina, la loro città.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Esperienze</div>
+      <ul class="footer-links">
+        <li><a href="#">Cucina locale</a></li>
+        <li><a href="#">Arte e cultura</a></li>
+        <li><a href="#">Avventura</a></li>
+        <li><a href="#">Enogastronomia</a></li>
+        <li><a href="#">Tour a piedi</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Per le guide</div>
+      <ul class="footer-links">
+        <li><a href="#">Diventa guida</a></li>
+        <li><a href="#">Come funziona</a></li>
+        <li><a href="#">Guida responsabile</a></li>
+        <li><a href="#">Risorse</a></li>
+        <li><a href="#">Community</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">LocalGuide</div>
+      <ul class="footer-links">
+        <li><a href="#">Chi siamo</a></li>
+        <li><a href="#">Stampa</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Lavora con noi</a></li>
+        <li><a href="#">Contatti</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2025 LocalGuide S.r.l. · Privacy · Termini · Sitemap</span>
+    <div class="footer-social">
+      <a href="#" class="social-btn">𝕏</a>
+      <a href="#" class="social-btn">in</a>
+      <a href="#" class="social-btn">📷</a>
+      <a href="#" class="social-btn">▶</a>
+    </div>
+  </div>
+</footer>
+
+<!-- MODAL AUTH -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <!-- ALERT -->
+    <div class="auth-alert" id="authAlert"></div>
+
+    <!-- VISTA: LOGIN -->
+    <div class="auth-view" id="viewLogin">
+      <h2 class="modal-title">Bentornato</h2>
+      <p class="modal-sub">Accedi per scoprire esperienze uniche</p>
+      <button class="btn-full btn-full-google" id="btnGoogleLogin">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continua con Google
+      </button>
+      <div class="form-divider"><span>oppure</span></div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="la-tua@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="pw-wrap">
+          <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="pw-toggle" data-target="loginPassword">👁</button>
+        </div>
+      </div>
+      <p class="forgot-link"><a id="linkForgot">Password dimenticata?</a></p>
+      <button class="btn-full btn-full-primary" id="btnLogin">Accedi</button>
+      <p class="modal-switch">Non hai un account? <a id="linkToSignup">Registrati</a></p>
+    </div>
+
+    <!-- VISTA: REGISTRAZIONE -->
+    <div class="auth-view" id="viewSignup" style="display:none">
+      <h2 class="modal-title">Crea account</h2>
+      <p class="modal-sub">Unisciti a migliaia di viaggiatori autentici</p>
+      <button class="btn-full btn-full-google" id="btnGoogleSignup">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continua con Google
+      </button>
+      <div class="form-divider"><span>oppure</span></div>
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input type="text" class="form-input" id="signupName" placeholder="Mario Rossi" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="signupEmail" placeholder="mario@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="pw-wrap">
+          <input type="password" class="form-input" id="signupPassword" placeholder="Almeno 6 caratteri" autocomplete="new-password">
+          <button type="button" class="pw-toggle" data-target="signupPassword">👁</button>
+        </div>
+        <div class="pw-strength" id="pwStrength"><div class="pw-strength-bar" id="pwStrengthBar"></div></div>
+        <div class="pw-strength-label" id="pwStrengthLabel"></div>
+      </div>
+      <button class="btn-full btn-full-primary" id="btnSignup">Crea account</button>
+      <p class="modal-switch">Hai già un account? <a id="linkToLogin">Accedi</a></p>
+    </div>
+
+    <!-- VISTA: RESET PASSWORD -->
+    <div class="auth-view" id="viewReset" style="display:none">
+      <h2 class="modal-title">Recupera accesso</h2>
+      <p class="modal-sub">Ti inviamo un link per reimpostare la password</p>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="resetEmail" placeholder="la-tua@email.com" autocomplete="email">
+      </div>
+      <button class="btn-full btn-full-primary" id="btnReset">Invia link di recupero</button>
+      <p class="modal-switch">Ti sei ricordato? <a id="linkBackLogin">Torna al login</a></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- PANNELLO ACCOUNT -->
+<div class="panel-overlay" id="panelOverlay">
+  <div class="panel">
+    <div class="panel-head">
+      <button class="modal-close" onclick="closePanel()">✕</button>
+      <div class="panel-title">Il tuo account</div>
+      <div class="panel-tabs">
+        <button class="panel-tab active" id="tabPrenotazioni">Prenotazioni</button>
+        <button class="panel-tab" id="tabPreferiti">Preferiti</button>
+      </div>
+    </div>
+    <div class="panel-body" id="panelBody">
+      <div class="panel-loading">Caricamento...</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODULO PUBBLICA ESPERIENZA -->
+<div class="modal-overlay" id="pubblicaOverlay">
+  <div class="modal modal-wide">
+    <button class="modal-close" onclick="chiudiPubblica()">✕</button>
+    <div class="auth-alert" id="pubAlert"></div>
+    <h2 class="modal-title" id="pubTitolo">Pubblica un'esperienza</h2>
+    <p class="modal-sub">Racconta cosa sai fare e cosa conosci della tua città.</p>
+
+    <div class="form-group">
+      <label class="form-label">Titolo</label>
+      <input type="text" class="form-input" id="pTitolo" maxlength="90"
+             placeholder="Es. Pasta fresca con la nonna a Bologna">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Città</label>
+        <div class="ac-wrap">
+          <input type="text" class="form-input" id="pCitta" maxlength="60"
+                 placeholder="Inizia a scrivere..." autocomplete="off"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="pCittaLista">
+          <div class="ac-spinner" id="pCittaSpinner"></div>
+          <ul class="ac-list" id="pCittaLista" role="listbox"></ul>
+        </div>
+        <div class="form-hint" id="pCittaEsito"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-input" id="pCategoria">
+          <option value="cucina">🍳 Cucina</option>
+          <option value="arte">🎨 Arte e cultura</option>
+          <option value="avventura">🏔️ Avventura</option>
+          <option value="vino">🍷 Vino e cibo</option>
+          <option value="musica">🎵 Musica</option>
+          <option value="tour">🗺️ Tour a piedi</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row form-row-3">
+      <div class="form-group">
+        <label class="form-label">Prezzo €</label>
+        <input type="number" class="form-input" id="pPrezzo" min="1" max="2000" placeholder="45">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durata</label>
+        <input type="text" class="form-input" id="pDurata" maxlength="20" placeholder="3 ore">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Max persone</label>
+        <input type="number" class="form-input" id="pMax" min="1" max="50" placeholder="8">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Lingue</label>
+        <input type="text" class="form-input" id="pLingue" maxlength="40" placeholder="IT, EN">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Orari disponibili</label>
+        <input type="text" class="form-input" id="pOrari" maxlength="60" placeholder="10:00, 15:00">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Descrizione</label>
+      <textarea class="form-input form-textarea" id="pDescrizione" maxlength="1200"
+                placeholder="Cosa farete insieme? Perché proprio tu? Racconta come lo racconteresti a un amico."></textarea>
+      <div class="form-hint"><span id="pConta">0</span>/1200</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Cosa è incluso</label>
+      <input type="text" class="form-input" id="pIncluso" maxlength="200"
+             placeholder="Ingredienti, pranzo, vino — separa con la virgola">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Foto (indirizzo immagine)</label>
+      <input type="url" class="form-input" id="pFoto"
+             placeholder="https://images.unsplash.com/...">
+      <div class="form-hint">Incolla il link di una foto. Se lo lasci vuoto ne mettiamo una neutra.</div>
+    </div>
+
+    <button class="btn-full btn-full-primary" id="btnPubblica">Pubblica esperienza</button>
+    <p class="modal-switch">Potrai modificarla o rimuoverla dal tuo account.</p>
+  </div>
+</div>
+
+<script>
+  /* ============================================================
+     STATO — le esperienze arrivano da Firestore, non dal codice
+     ============================================================ */
+  const CATALOGO = {};          // riempito da caricaEsperienze()
+  let espCorrente = null;
+  const FOTO_NEUTRA = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+       <rect width="600" height="400" fill="#E8DCC8"/>
+       <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
+         font-family="serif" font-size="64" fill="#C4602A" opacity="0.5">◷</text>
+     </svg>`);
+
+  const ETICHETTE_CAT = {
+    cucina: '🍳 Cucina', arte: '🎨 Arte', avventura: '🏔️ Avventura',
+    vino: '🍷 Vino e cibo', musica: '🎵 Musica', tour: '🗺️ Tour a piedi'
+  };
+
+  // PANNELLO ACCOUNT
+  function openPanel(tab) {
+    document.getElementById('panelOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    if (window.caricaTab) window.caricaTab(tab || 'prenotazioni');
+  }
+  function closePanel() {
+    document.getElementById('panelOverlay').classList.remove('active');
+    if (!document.getElementById('expDetailOverlay').classList.contains('active')) {
+      document.body.style.overflow = '';
+    }
+  }
+  document.getElementById('panelOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closePanel();
+  });
+
+  // TOAST
+  let toastTimer;
+  function toast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (ok ? ' ok' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // APERTURA SEMPRE DALL'ALTO
+  // I browser mobili ripristinano la posizione di scroll precedente al reload:
+  // con una pagina lunga come questa significa non vedere mai l'inizio.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+  function vaiInCima() {
+    const html = document.documentElement;
+    const prima = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';   // niente animazione, salto secco
+    window.scrollTo(0, 0);
+    html.style.scrollBehavior = prima;
+  }
+  vaiInCima();
+  window.addEventListener('load', vaiInCima);
+  // pageshow copre il ritorno dalla cache (tasto indietro su iOS)
+  window.addEventListener('pageshow', e => { if (e.persisted) vaiInCima(); });
+
+  // MENU MOBILE
+  const burger = document.getElementById('burger');
+  const navLinks = document.getElementById('navLinks');
+  const navBackdrop = document.getElementById('navBackdrop');
+
+  function toggleMenu(force) {
+    const open = force !== undefined ? force : !navLinks.classList.contains('open');
+    navLinks.classList.toggle('open', open);
+    burger.classList.toggle('open', open);
+    navBackdrop.classList.toggle('show', open);
+    burger.setAttribute('aria-expanded', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  burger.addEventListener('click', () => toggleMenu());
+  navBackdrop.addEventListener('click', () => toggleMenu(false));
+  navLinks.querySelectorAll('a').forEach(a =>
+    a.addEventListener('click', () => toggleMenu(false))
+  );
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900 && navLinks.classList.contains('open')) toggleMenu(false);
+  });
+
+  // CURSOR
+  const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  if (!isTouch) document.body.classList.add('custom-cursor');
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+  });
+
+  function animateRing() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    ring.style.left = ringX + 'px';
+    ring.style.top = ringY + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button, .exp-card, .cat-card, .guide-card, .dest-card').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '20px';
+      cursor.style.height = '20px';
+      ring.style.width = '60px';
+      ring.style.height = '60px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '12px';
+      cursor.style.height = '12px';
+      ring.style.width = '36px';
+      ring.style.height = '36px';
+    });
+  });
+
+  // MODAL — apre sempre sulla vista richiesta
+  function openModal(view) {
+    showAuthView(view || 'login');
+    document.getElementById('modalOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+    clearAuthAlert();
+    // riattiva lo scroll solo se non c'è il modal esperienza aperto
+    if (!document.getElementById('expDetailOverlay').classList.contains('active')) {
+      document.body.style.overflow = '';
+    }
+  }
+  function showAuthView(view) {
+    clearAuthAlert();
+    ['Login', 'Signup', 'Reset'].forEach(v => {
+      document.getElementById('view' + v).style.display =
+        (v.toLowerCase() === view) ? 'block' : 'none';
+    });
+  }
+  function showAuthAlert(msg, type) {
+    const el = document.getElementById('authAlert');
+    el.textContent = msg;
+    el.className = 'auth-alert show ' + (type || 'error');
+  }
+  function clearAuthAlert() {
+    const el = document.getElementById('authAlert');
+    el.className = 'auth-alert';
+    el.textContent = '';
+  }
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeExpDetail(); closePanel(); }
+  });
+
+  // Switch tra viste
+  document.getElementById('linkToSignup').onclick = () => showAuthView('signup');
+  document.getElementById('linkToLogin').onclick = () => showAuthView('login');
+  document.getElementById('linkForgot').onclick = () => showAuthView('reset');
+  document.getElementById('linkBackLogin').onclick = () => showAuthView('login');
+  document.getElementById('navLoginBtn').onclick = e => { e.preventDefault(); openModal('login'); };
+  document.getElementById('navSignupBtn').onclick = e => { e.preventDefault(); openModal('signup'); };
+
+  // Mostra/nascondi password
+  document.querySelectorAll('.pw-toggle').forEach(btn => {
+    btn.onclick = () => {
+      const input = document.getElementById(btn.dataset.target);
+      const hidden = input.type === 'password';
+      input.type = hidden ? 'text' : 'password';
+      btn.textContent = hidden ? '🙈' : '👁';
+    };
+  });
+
+  // Indicatore forza password
+  document.getElementById('signupPassword').addEventListener('input', e => {
+    const pw = e.target.value;
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const levels = [
+      { w: '0%',   c: 'transparent',  t: '' },
+      { w: '25%',  c: '#C4602A',      t: 'Troppo debole' },
+      { w: '45%',  c: '#C4602A',      t: 'Debole' },
+      { w: '65%',  c: '#C9A84C',      t: 'Discreta' },
+      { w: '85%',  c: '#5A7D5B',      t: 'Buona' },
+      { w: '100%', c: '#3D5A3E',      t: 'Ottima' }
+    ];
+    const lv = levels[pw ? score : 0];
+    const bar = document.getElementById('pwStrengthBar');
+    bar.style.width = lv.w;
+    bar.style.background = lv.c;
+    document.getElementById('pwStrengthLabel').textContent = lv.t;
+  });
+
+  // Menu utente
+  const userChip = document.getElementById('userChip');
+  const userMenu = document.getElementById('userMenu');
+  userChip.onclick = e => { e.stopPropagation(); userMenu.classList.toggle('open'); };
+  document.addEventListener('click', () => userMenu.classList.remove('open'));
+  userMenu.onclick = e => e.stopPropagation();
+
+  // EXP DETAIL MODAL — popolato dal catalogo
+  const esc2 = t => String(t ?? '').replace(/[<>&"]/g, c =>
+    ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;' }[c]));
+
+  function openExpDetail(id) {
+    const e = CATALOGO[id];
+    if (!e) return;                 // esperienza rimossa o non ancora caricata
+    espCorrente = id;
+
+    const set = (el, val) => { const n = document.getElementById(el); if (n) n.textContent = val; };
+
+    e.img.forEach((src, i) => {
+      const n = document.getElementById('dImg' + i);
+      if (n) { n.src = src; n.alt = e.titolo; }
+    });
+
+    set('dLuogo', '📍 ' + e.luogo);
+    set('dTitolo', e.titolo);
+    set('dDurata', e.durata);
+    set('dGruppo', e.gruppo);
+    set('dLingue', e.lingue);
+    set('dEta', e.eta);
+    document.getElementById('dDescrizione').innerHTML = e.desc;
+
+    document.getElementById('dIncluso').innerHTML =
+      e.incluso.map(v => '<li>' + esc2(v) + '</li>').join('');
+
+    const gf = document.getElementById('dGuidaFoto');
+    gf.src = e.guidaFoto; gf.alt = e.guida;
+    set('dGuidaNome', e.guida + ' ✓');
+    set('dGuidaSub', e.guidaSub);
+
+    set('dRating', e.rating);
+    set('dRating2', e.rating + ' · ' + e.recensioni + ' recensioni');
+    set('dNRecensioni', e.recensioni + ' recensioni verificate');
+
+    document.getElementById('dRecensioni').innerHTML = e.rec.map(r => `
+      <div class="review-item">
+        <div class="review-item-header">
+          <img loading="lazy" src="${U}${r[3]}?w=80&q=80" alt="${esc2(r[0])}">
+          <div><div class="review-item-name">${esc2(r[0])}</div>
+               <div class="review-item-date">${esc2(r[1])}</div></div>
+        </div>
+        <div class="review-item-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+        <div class="review-item-text">${esc2(r[2])}</div>
+      </div>`).join('');
+
+    document.getElementById('dPrezzo').innerHTML =
+      '€' + e.prezzo + ' <span class="booking-price-sub">/ persona</span>';
+
+    document.getElementById('bookingTime').innerHTML =
+      e.orari.map(o => '<option>' + o + '</option>').join('');
+
+    // Limite partecipanti dal gruppo dichiarato
+    const max = parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    const g = document.getElementById('bookingGuests');
+    g.max = max;
+    if (parseInt(g.value) > max) g.value = max;
+
+    // Non si prenota nel passato
+    document.getElementById('bookingDate').min = new Date().toISOString().split('T')[0];
+
+    updateBooking();
+
+    const ov = document.getElementById('expDetailOverlay');
+    ov.classList.add('active');
+    // L'azzeramento va fatto DOPO aver reso visibile l'elemento: su un nodo
+    // display:none impostare scrollTop non ha effetto e il browser ripristina
+    // la posizione precedente alla riapertura.
+    ov.scrollTop = 0;
+    requestAnimationFrame(() => { ov.scrollTop = 0; });
+    document.body.style.overflow = 'hidden';
+  }
+  function closeExpDetail() {
+    document.getElementById('expDetailOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('expDetailOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeExpDetail();
+  });
+
+  // BOOKING CALCULATOR
+  function updateBooking() {
+    const e = CATALOGO[espCorrente];
+    if (!e) return;
+    const max = parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    const input = document.getElementById('bookingGuests');
+    let guests = parseInt(input.value) || 1;
+    if (guests > max) { guests = max; input.value = max; }
+    if (guests < 1)   { guests = 1;   input.value = 1; }
+
+    const subtotal = e.prezzo * guests;
+    const fee = Math.round(subtotal * 0.1);
+    document.getElementById('bookingLineLabel').textContent =
+      `€${e.prezzo} × ${guests} ${guests === 1 ? 'persona' : 'persone'}`;
+    document.getElementById('bookingLineTotal').textContent = `€${subtotal}`;
+    document.getElementById('bookingFee').textContent = `€${fee}`;
+    document.getElementById('bookingGrandTotal').textContent = `€${subtotal + fee}`;
+  }
+
+  // FILTRI CATEGORIA
+  let filtroAttivo = 'all';
+  document.getElementById('filterBar').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filtroAttivo = btn.dataset.cat;
+    if (window.renderTutte) window.renderTutte();
+  });
+
+  // ===== LEAFLET MAP =====
+  let leafletMap = null;
+
+  function initMap() {
+    leafletMap = L.map('leaflet-map', {
+      center: [42.5, 12.8],
+      zoom: 6,
+      zoomControl: true,
+      scrollWheelZoom: false
+    });
+
+    // Tile layer OpenStreetMap — nessuna API key richiesta
+    const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(leafletMap);
+
+    // Fallback su Esri se OSM non risponde
+    let fallbackAttivo = false;
+    baseLayer.on('tileerror', () => {
+      if (fallbackAttivo) return;
+      fallbackAttivo = true;
+      leafletMap.removeLayer(baseLayer);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Esri',
+        maxZoom: 16
+      }).addTo(leafletMap);
+    });
+
+    // I marker vengono creati da aggiornaMappa() quando i dati arrivano da Firestore
+
+    // Geolocalizzazione utente
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        const userIcon = L.divIcon({
+          html: `<div style="width:16px;height:16px;background:#C4602A;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(196,96,42,0.5)"></div>`,
+          className: '',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+        L.marker([latitude, longitude], { icon: userIcon })
+          .addTo(leafletMap)
+          .bindPopup('<div style="font-size:0.8rem;font-weight:600">📍 Sei qui</div>');
+      });
+    }
+  }
+
+  // Init mappa quando DOM è pronto
+  document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    window.leafletMap = leafletMap;
+    if (window.caricaEsperienze) window.caricaEsperienze();
+  });
+
+  // MAP PIN SELECT (old version overridden above)
+
+  // NEWSLETTER
+  function subscribeNewsletter() {
+    const email = document.getElementById('nlEmail').value;
+    const note = document.getElementById('nlNote');
+    if (email && email.includes('@')) {
+      note.innerHTML = '✅ <strong>Benvenuto/a!</strong> Controlla la tua casella email.';
+      note.style.color = 'var(--moss)';
+      document.getElementById('nlEmail').value = '';
+    } else {
+      note.innerHTML = '⚠️ Inserisci un\'email valida.';
+      note.style.color = 'var(--terra)';
+    }
+  }
+
+  // CARD → dettaglio della propria esperienza
+  document.querySelectorAll('.exp-card, .trending-card').forEach(card => {
+    card.addEventListener('click', () => openExpDetail(card.dataset.expId));
+  });
+
+  // WISHLIST: gestita dal modulo Firestore in fondo alla pagina
+
+  // SCROLL REVEAL
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // NAV SCROLL
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    if (window.scrollY > 50) {
+      nav.style.boxShadow = '0 4px 30px rgba(0,0,0,0.08)';
+    } else {
+      nav.style.boxShadow = 'none';
+    }
+  });
+</script>
+
+<!-- ============ FIREBASE AUTH ============ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  query,
+  orderBy,
+  serverTimestamp,
+  where,
+  limit
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCAimxhnISHC2zgTJ8wony9YsIQ2ViEx2c",
+  authDomain: "localguide-91745.firebaseapp.com",
+  projectId: "localguide-91745",
+  storageBucket: "localguide-91745.firebasestorage.app",
+  messagingSenderId: "314844683678",
+  appId: "1:314844683678:web:55d4561ae3fa5d2cca0a8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+auth.languageCode = 'it';
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Sessione persistente (resta loggato anche dopo aver chiuso il browser)
+setPersistence(auth, browserLocalPersistence);
+
+/* ---------- Messaggi di errore in italiano ---------- */
+const ERRORI = {
+  'auth/invalid-email':              'L\u2019indirizzo email non \u00e8 valido.',
+  'auth/missing-email':              'Inserisci il tuo indirizzo email.',
+  'auth/user-disabled':              'Questo account \u00e8 stato disattivato.',
+  'auth/user-not-found':             'Nessun account trovato con questa email.',
+  'auth/wrong-password':             'Password errata. Riprova.',
+  'auth/invalid-credential':         'Email o password non corretti.',
+  'auth/email-already-in-use':       'Esiste gi\u00e0 un account con questa email. Prova ad accedere.',
+  'auth/weak-password':              'La password deve avere almeno 6 caratteri.',
+  'auth/missing-password':           'Inserisci una password.',
+  'auth/too-many-requests':          'Troppi tentativi falliti. Riprova tra qualche minuto.',
+  'auth/network-request-failed':     'Connessione assente. Controlla la rete e riprova.',
+  'auth/popup-closed-by-user':       'Finestra di Google chiusa prima di completare l\u2019accesso.',
+  'auth/cancelled-popup-request':    'Accesso annullato.',
+  'auth/popup-blocked':              'Il browser ha bloccato il popup. Abilitalo e riprova.',
+  'auth/account-exists-with-different-credential': 'Questa email \u00e8 gi\u00e0 registrata con un altro metodo di accesso.',
+  'auth/unauthorized-domain':        'Dominio non autorizzato in Firebase. Aggiungilo in Authentication \u2192 Settings \u2192 Authorized domains.',
+  'auth/operation-not-allowed':      'Metodo di accesso non abilitato nella console Firebase.'
+};
+const traduciErrore = e => ERRORI[e?.code] || 'Si \u00e8 verificato un errore. Riprova.';
+
+/* ---------- Helper: stato di caricamento dei bottoni ---------- */
+function setLoading(btn, loading, testo) {
+  if (loading) {
+    btn.dataset.original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> ' + (testo || 'Attendi...');
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.original) btn.innerHTML = btn.dataset.original;
+  }
+}
+
+/* ---------- Avatar generato dalle iniziali ---------- */
+function avatarIniziali(nome, email) {
+  const base = (nome || email || 'U').trim();
+  const iniziali = base.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">
+    <rect width="80" height="80" fill="#C4602A"/>
+    <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
+      font-family="DM Sans, sans-serif" font-size="32" font-weight="600" fill="#fff">${iniziali}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
+/* ---------- REGISTRAZIONE ---------- */
+document.getElementById('btnSignup').addEventListener('click', async () => {
+  const btn   = document.getElementById('btnSignup');
+  const nome  = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pw    = document.getElementById('signupPassword').value;
+
+  if (!nome)        return showAuthAlert('Inserisci il tuo nome.');
+  if (!email)       return showAuthAlert('Inserisci la tua email.');
+  if (pw.length < 6) return showAuthAlert('La password deve avere almeno 6 caratteri.');
+
+  setLoading(btn, true, 'Creazione account...');
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pw);
+    await updateProfile(cred.user, {
+      displayName: nome,
+      photoURL: avatarIniziali(nome, email)
+    });
+    showAuthAlert('Account creato! Benvenuto su LocalGuide, ' + nome.split(' ')[0] + '.', 'success');
+    setTimeout(closeModal, 1400);
+  } catch (e) {
+    showAuthAlert(traduciErrore(e));
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+/* ---------- LOGIN EMAIL/PASSWORD ---------- */
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const btn   = document.getElementById('btnLogin');
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw    = document.getElementById('loginPassword').value;
+
+  if (!email) return showAuthAlert('Inserisci la tua email.');
+  if (!pw)    return showAuthAlert('Inserisci la tua password.');
+
+  setLoading(btn, true, 'Accesso in corso...');
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+    closeModal();
+  } catch (e) {
+    showAuthAlert(traduciErrore(e));
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+// Invio con Enter
+['loginEmail', 'loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btnLogin').click();
+  });
+});
+['signupName', 'signupEmail', 'signupPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btnSignup').click();
+  });
+});
+document.getElementById('resetEmail').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnReset').click();
+});
+
+/* ---------- LOGIN CON GOOGLE ---------- */
+async function loginGoogle(btn) {
+  setLoading(btn, true, 'Apertura Google...');
+  try {
+    await signInWithPopup(auth, googleProvider);
+    closeModal();
+  } catch (e) {
+    showAuthAlert(traduciErrore(e));
+  } finally {
+    setLoading(btn, false);
+  }
+}
+document.getElementById('btnGoogleLogin')
+  .addEventListener('click', e => loginGoogle(e.currentTarget));
+document.getElementById('btnGoogleSignup')
+  .addEventListener('click', e => loginGoogle(e.currentTarget));
+
+/* ---------- RESET PASSWORD ---------- */
+document.getElementById('btnReset').addEventListener('click', async () => {
+  const btn   = document.getElementById('btnReset');
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!email) return showAuthAlert('Inserisci la tua email.');
+
+  setLoading(btn, true, 'Invio in corso...');
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showAuthAlert('Ti abbiamo inviato un link di recupero. Controlla la posta (anche lo spam).', 'success');
+  } catch (e) {
+    showAuthAlert(traduciErrore(e));
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+/* ---------- LOGOUT ---------- */
+document.getElementById('btnLogout').addEventListener('click', async e => {
+  e.preventDefault();
+  await signOut(auth);
+  document.getElementById('userMenu').classList.remove('open');
+});
+
+/* ---------- STATO SESSIONE ---------- */
+onAuthStateChanged(auth, user => {
+  const guest = document.getElementById('navGuest');
+  const zona  = document.getElementById('navUser');
+
+  if (user) {
+    const nome   = user.displayName || user.email.split('@')[0];
+    const avatar = user.photoURL || avatarIniziali(nome, user.email);
+
+    document.getElementById('userName').textContent       = nome.split(' ')[0];
+    document.getElementById('userMenuName').textContent   = nome;
+    document.getElementById('userMenuEmail').textContent  = user.email;
+    document.getElementById('userAvatar').src             = avatar;
+    document.getElementById('userMenuAvatar').src         = avatar;
+
+    guest.style.display = 'none';
+    zona.style.display  = 'flex';
+
+    caricaPreferiti(user.uid);
+    if (window.renderTutte) window.renderTutte();
+
+    // Svuota i campi del form
+    ['loginEmail','loginPassword','signupName','signupEmail','signupPassword','resetEmail']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  } else {
+    guest.style.display = 'flex';
+    zona.style.display  = 'none';
+    preferitiLocali.clear();
+    aggiornaCuori();
+    closePanel();
+    if (window.renderTutte) window.renderTutte();
+  }
+});
+
+/* ============================================================
+   FIRESTORE — preferiti e prenotazioni
+   Struttura:
+     users/{uid}/preferiti/{expId}
+     users/{uid}/prenotazioni/{autoId}
+   ============================================================ */
+
+let preferitiLocali = new Set();
+
+const refPreferiti   = uid => collection(db, 'users', uid, 'preferiti');
+const refPrenotazioni = uid => collection(db, 'users', uid, 'prenotazioni');
+
+/* ---------- PREFERITI ---------- */
+
+async function caricaPreferiti(uid) {
+  try {
+    const snap = await getDocs(refPreferiti(uid));
+    preferitiLocali = new Set(snap.docs.map(d => d.id));
+    aggiornaCuori();
+  } catch (e) {
+    console.error('Errore caricamento preferiti:', e);
+  }
+}
+
+function aggiornaCuori() {
+  document.querySelectorAll('.exp-wishlist').forEach(btn => {
+    const id = btn.dataset.expId;
+    const salvato = preferitiLocali.has(id);
+    btn.textContent = salvato ? '❤️' : '🤍';
+    btn.setAttribute('aria-label', salvato ? 'Rimuovi dai preferiti' : 'Salva nei preferiti');
+  });
+}
+
+async function togglePreferito(btn) {
+  const user = auth.currentUser;
+  if (!user) {
+    openModal('login');
+    showAuthAlert('Accedi per salvare le esperienze che ti piacciono.');
+    return;
+  }
+  const id = btn.dataset.expId;
+  const erGiaSalvato = preferitiLocali.has(id);
+
+  // Aggiornamento ottimistico: l'interfaccia risponde subito
+  preferitiLocali[erGiaSalvato ? 'delete' : 'add'](id);
+  aggiornaCuori();
+
+  try {
+    if (erGiaSalvato) {
+      await deleteDoc(doc(db, 'users', user.uid, 'preferiti', id));
+      toast('Rimosso dai preferiti');
+    } else {
+      await setDoc(doc(db, 'users', user.uid, 'preferiti', id), {
+        titolo: btn.dataset.title,
+        citta:  btn.dataset.city,
+        prezzo: Number(btn.dataset.price),
+        creato: serverTimestamp()
+      });
+      toast('Salvato nei preferiti', true);
+    }
+  } catch (e) {
+    // Ripristina lo stato se la scrittura fallisce
+    preferitiLocali[erGiaSalvato ? 'add' : 'delete'](id);
+    aggiornaCuori();
+    console.error(e);
+    toast('Non riesco a salvare. Riprova.');
+  }
+}
+
+document.querySelectorAll('.exp-wishlist').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    togglePreferito(btn);
+  });
+});
+
+/* ---------- PRENOTAZIONI ---------- */
+
+window.richiediLogin = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    openModal('login');
+    showAuthAlert('Accedi o registrati per completare la prenotazione.');
+    return false;
+  }
+
+  const e      = CATALOGO[espCorrente];
+  const btn    = document.querySelector('.booking-cta');
+  const data   = document.getElementById('bookingDate').value;
+  const orario = document.getElementById('bookingTime').value;
+  const nPers  = parseInt(document.getElementById('bookingGuests').value) || 1;
+
+  if (!data) { toast('Scegli una data per continuare.'); return false; }
+
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  if (new Date(data) < oggi) { toast('La data scelta è già passata.'); return false; }
+
+  const prezzo  = e.prezzo;
+  const imponib = prezzo * nPers;
+  const totale  = imponib + Math.round(imponib * 0.1);
+
+  const testoOriginale = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Conferma in corso...';
+
+  try {
+    await addDoc(refPrenotazioni(user.uid), {
+      espId:         espCorrente,
+      titolo:        e.titolo,
+      citta:         e.citta,
+      guida:         e.guida,
+      data, orario,
+      partecipanti:  nPers,
+      prezzoUnitario: prezzo,
+      totale,
+      stato:         'confermata',
+      creato:        serverTimestamp()
+    });
+    btn.textContent = '✓ Prenotato!';
+    toast('Prenotazione confermata. La trovi nel tuo account.', true);
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = testoOriginale;
+      closeExpDetail();
+    }, 1600);
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = testoOriginale;
+    toast('Prenotazione non riuscita. Riprova.');
+  }
+  return true;
+};
+
+async function annullaPrenotazione(id) {
+  const user = auth.currentUser;
+  if (!user) return;
+  try {
+    await updateDoc(doc(db, 'users', user.uid, 'prenotazioni', id), { stato: 'annullata' });
+    toast('Prenotazione annullata');
+    caricaTab('prenotazioni');
+  } catch (e) {
+    console.error(e);
+    toast('Non riesco ad annullare. Riprova.');
+  }
+}
+window.annullaPrenotazione = annullaPrenotazione;
+
+/* ---------- PANNELLO ACCOUNT ---------- */
+
+const fmtData = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+const esc = t => String(t ?? '').replace(/[<>&"]/g, c =>
+  ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;' }[c]));
+
+window.caricaTab = async function (tab) {
+  const body = document.getElementById('panelBody');
+  const user = auth.currentUser;
+
+  document.getElementById('tabPrenotazioni').classList.toggle('active', tab === 'prenotazioni');
+  document.getElementById('tabPreferiti').classList.toggle('active', tab === 'preferiti');
+
+  if (!user) {
+    body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">🔒</div>' +
+      '<div class="panel-empty-text">Accedi per vedere i tuoi dati.</div></div>';
+    return;
+  }
+
+  body.innerHTML = '<div class="panel-loading">Caricamento...</div>';
+
+  try {
+    if (tab === 'prenotazioni') {
+      const snap = await getDocs(query(refPrenotazioni(user.uid), orderBy('creato', 'desc')));
+      if (snap.empty) {
+        body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">🎫</div>' +
+          '<div class="panel-empty-text">Non hai ancora prenotazioni.<br>Scegli un\'esperienza e inizia da lì.</div></div>';
+        return;
+      }
+      body.innerHTML = snap.docs.map(d => {
+        const b = d.data();
+        const annullata = b.stato === 'annullata';
+        return `
+          <div class="booking-item">
+            <div class="booking-item-info">
+              <div class="booking-item-title">${esc(b.titolo)}</div>
+              <div class="booking-item-meta">
+                <span>📍 ${esc(b.citta)}</span>
+                <span>📅 ${fmtData(b.data)}</span>
+                <span>🕐 ${esc(b.orario)}</span>
+                <span>👥 ${b.partecipanti}</span>
+              </div>
+            </div>
+            <div class="booking-item-actions">
+              <span class="booking-badge ${annullata ? 'cancelled' : ''}">${annullata ? 'Annullata' : 'Confermata'}</span>
+              <div class="booking-item-total">€${b.totale}</div>
+              ${annullata ? '' : `<button class="btn-cancel" onclick="annullaPrenotazione('${d.id}')">Annulla</button>`}
+            </div>
+          </div>`;
+      }).join('');
+
+    } else {
+      const snap = await getDocs(refPreferiti(user.uid));
+      if (snap.empty) {
+        body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">❤️</div>' +
+          '<div class="panel-empty-text">Nessun preferito salvato.<br>Tocca il cuore su un\'esperienza per tenerla da parte.</div></div>';
+        return;
+      }
+      body.innerHTML = snap.docs.map(d => {
+        const f = d.data();
+        return `
+          <div class="fav-item">
+            <div class="fav-item-info">
+              <div class="fav-item-title">${esc(f.titolo)}</div>
+              <div class="fav-item-city">📍 ${esc(f.citta)}</div>
+            </div>
+            <div class="fav-item-price">€${f.prezzo}</div>
+          </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    console.error(e);
+    body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">⚠️</div>' +
+      '<div class="panel-empty-text">Non riesco a caricare i dati.<br>Controlla la connessione e riprova.</div></div>';
+  }
+};
+
+document.getElementById('tabPrenotazioni').onclick = () => caricaTab('prenotazioni');
+document.getElementById('tabPreferiti').onclick    = () => caricaTab('preferiti');
+
+/* ---------- Voci del menu utente ---------- */
+const vociMenu = document.querySelectorAll('#userMenu .user-menu-item');
+vociMenu[0].addEventListener('click', e => {   // Le mie prenotazioni
+  e.preventDefault();
+  document.getElementById('userMenu').classList.remove('open');
+  openPanel('prenotazioni');
+});
+vociMenu[1].addEventListener('click', e => {   // Preferiti
+  e.preventDefault();
+  document.getElementById('userMenu').classList.remove('open');
+  openPanel('preferiti');
+});
+
+/* ============================================================
+   ESPERIENZE — collezione pubblica /esperienze
+   Lettura libera, scrittura solo per l'autore (vedi regole Firestore)
+   ============================================================ */
+
+
+const ERRORI_DB = {
+  'permission-denied': 'Permesso negato da Firestore. Le regole non sono pubblicate, oppure non consentono la scrittura su /esperienze.',
+  'unauthenticated':   'Sessione scaduta. Esci e rientra, poi riprova.',
+  'unavailable':       'Database irraggiungibile. Controlla la connessione.',
+  'failed-precondition':'Manca un indice su Firestore. Apri la console del browser: l\'errore contiene un link per crearlo con un clic.',
+  'not-found':         'Database Firestore non trovato: forse non è ancora stato creato nel progetto.',
+  'invalid-argument':  'Dati non validi per Firestore.',
+  'resource-exhausted':'Quota Firestore esaurita per oggi.'
+};
+const spiegaDb = e => (ERRORI_DB[e?.code] || 'Errore imprevisto') + '  [' + (e?.code || '?') + ']';
+
+const refEsperienze = () => collection(db, 'esperienze');
+
+/* ---------- Caricamento ---------- */
+async function caricaEsperienze() {
+  try {
+    const snap = await getDocs(query(refEsperienze(), orderBy('creato', 'desc'), limit(200)));
+    Object.keys(CATALOGO).forEach(k => delete CATALOGO[k]);
+
+    snap.docs.forEach(d => {
+      const v = d.data();
+      CATALOGO[d.id] = {
+        titolo: v.titolo,
+        luogo: v.citta,
+        citta: v.citta,
+        categoria: v.categoria,
+        prezzo: v.prezzo,
+        rating: '—',
+        recensioni: 0,
+        durata: v.durata,
+        gruppo: 'Max ' + v.maxPersone + ' persone',
+        lingue: v.lingue,
+        eta: 'Tutte le età',
+        guida: v.autoreNome,
+        guidaSub: 'Guida su LocalGuide',
+        guidaFoto: v.autoreFoto || '',
+        autoreUid: v.autoreUid,
+        lat: v.lat, lng: v.lng,
+        img: [v.foto || FOTO_NEUTRA, v.foto || FOTO_NEUTRA, v.foto || FOTO_NEUTRA],
+        orari: (v.orari && v.orari.length) ? v.orari : ['10:00'],
+        desc: (v.descrizione || '').replace(/\n/g, '<br>'),
+        incluso: v.incluso || [],
+        rec: []
+      };
+    });
+    renderTutto();
+    completaCoordinateMancanti();
+  } catch (e) {
+    console.error('Caricamento esperienze:', e);
+    document.getElementById('grigliaTutte').innerHTML = statoVuoto('⚠️',
+      'Non riesco a caricare', spiegaDb(e), false);
+  }
+}
+window.caricaEsperienze = caricaEsperienze;
+
+/* ---------- Componenti di rendering ---------- */
+const statoVuoto = (icona, titolo, testo, conBottone) => `
+  <div class="vuoto">
+    <div class="vuoto-icona">${icona}</div>
+    <div class="vuoto-titolo">${titolo}</div>
+    <div class="vuoto-testo">${testo}</div>
+    ${conBottone ? '<a href="#" class="btn-primary" onclick="apriPubblica();return false;">Pubblica la prima</a>' : ''}
+  </div>`;
+
+function cardGrande(id, e) {
+  return `
+    <div class="exp-card featured-large" data-exp-id="${id}">
+      <div class="exp-img">
+        <img loading="lazy" src="${esc2(e.img[0])}" alt="${esc2(e.titolo)}">
+        <div class="exp-badge">⭐ In evidenza</div>
+        <button class="exp-wishlist" data-exp-id="${id}" data-title="${esc2(e.titolo)}"
+                data-city="${esc2(e.citta)}" data-price="${e.prezzo}"
+                aria-label="Salva nei preferiti">🤍</button>
+      </div>
+      <div class="exp-body">
+        <div class="exp-location">📍 ${esc2(e.citta)}</div>
+        <h3 class="exp-title">${esc2(e.titolo)}</h3>
+        <div class="exp-host"><span class="host-name">Con <strong>${esc2(e.guida)}</strong></span></div>
+        <div class="exp-meta">
+          <div class="exp-meta-item">⏱ ${esc2(e.durata)}</div>
+          <div class="exp-meta-item">👥 ${esc2(e.gruppo)}</div>
+          <div class="exp-meta-item">🗣 ${esc2(e.lingue)}</div>
+        </div>
+        <div class="exp-footer">
+          <div class="exp-price">€${e.prezzo} <span>/ persona</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function cardPiccola(id, e) {
+  return `
+    <div class="exp-card" data-exp-id="${id}">
+      <div class="exp-img">
+        <img loading="lazy" src="${esc2(e.img[0])}" alt="${esc2(e.titolo)}">
+        <button class="exp-wishlist" data-exp-id="${id}" data-title="${esc2(e.titolo)}"
+                data-city="${esc2(e.citta)}" data-price="${e.prezzo}"
+                aria-label="Salva nei preferiti">🤍</button>
+      </div>
+      <div class="exp-body">
+        <div class="exp-location">📍 ${esc2(e.citta)}</div>
+        <h3 class="exp-title">${esc2(e.titolo)}</h3>
+        <div class="exp-host"><span class="host-name">Con <strong>${esc2(e.guida)}</strong></span></div>
+        <div class="exp-footer">
+          <div class="exp-price">€${e.prezzo} <span>/ persona</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function cardTrending(id, e, mia) {
+  return `
+    <div class="trending-card" data-exp-id="${id}" data-cat="${esc2(e.categoria)}">
+      <div class="trending-img">
+        <img loading="lazy" src="${esc2(e.img[0])}" alt="${esc2(e.titolo)}">
+        <button class="exp-wishlist" style="top:0.8rem" data-exp-id="${id}"
+                data-title="${esc2(e.titolo)}" data-city="${esc2(e.citta)}"
+                data-price="${e.prezzo}" aria-label="Salva nei preferiti">🤍</button>
+      </div>
+      <div class="trending-body">
+        <div class="trending-cat">${ETICHETTE_CAT[e.categoria] || e.categoria}</div>
+        <div class="trending-title">${esc2(e.titolo)}</div>
+        <div class="trending-duration"><span>⏱ ${esc2(e.durata)}</span><span>📍 ${esc2(e.citta)}</span></div>
+        <div class="trending-footer">
+          <div class="trending-price">€${e.prezzo} <small>/ pers.</small></div>
+          <div class="trending-rating">${esc2(e.guida)}</div>
+        </div>
+      </div>
+      ${mia ? `<div class="card-azioni">
+        <button class="card-azione danger" data-elimina="${id}">Elimina</button>
+      </div>` : ''}
+    </div>`;
+}
+
+/* ---------- Rendering delle sezioni ---------- */
+function renderEvidenza() {
+  const box = document.getElementById('grigliaEvidenza');
+  const voci = Object.entries(CATALOGO).slice(0, 4);
+  if (!voci.length) {
+    box.innerHTML = statoVuoto('🧭', 'Ancora nessuna esperienza',
+      'Questo spazio aspetta la prima guida. Se conosci la tua città, tocca a te.', true);
+    return;
+  }
+  box.innerHTML = voci.map(([id, e], i) =>
+    i === 0 ? cardGrande(id, e) : cardPiccola(id, e)).join('');
+}
+
+window.renderTutte = function () {
+  const box = document.getElementById('grigliaTutte');
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  let voci = Object.entries(CATALOGO);
+  if (filtroAttivo !== 'all') voci = voci.filter(([, e]) => e.categoria === filtroAttivo);
+
+  const tot = Object.keys(CATALOGO).length;
+  document.getElementById('contatoreEsperienze').textContent =
+    tot ? `${tot} ${tot === 1 ? 'esperienza' : 'esperienze'}` : '';
+
+  if (!voci.length) {
+    box.innerHTML = tot
+      ? statoVuoto('🔍', 'Nessuna in questa categoria', 'Prova con un altro filtro.', false)
+      : statoVuoto('🧭', 'Ancora nessuna esperienza',
+          'Pubblica la tua e sarà la prima a comparire qui.', true);
+    return;
+  }
+  box.innerHTML = voci.map(([id, e]) => cardTrending(id, e, uid && e.autoreUid === uid)).join('');
+};
+
+function renderGuide() {
+  const box = document.getElementById('grigliaGuide');
+  const perGuida = {};
+  Object.values(CATALOGO).forEach(e => {
+    if (!perGuida[e.autoreUid]) perGuida[e.autoreUid] = { nome: e.guida, foto: e.guidaFoto, citta: new Set(), n: 0 };
+    perGuida[e.autoreUid].citta.add(e.citta);
+    perGuida[e.autoreUid].n++;
+  });
+  const voci = Object.values(perGuida).slice(0, 4);
+  if (!voci.length) {
+    box.innerHTML = statoVuoto('👋', 'Nessuna guida, per ora',
+      'Le guide compaiono qui quando pubblicano la loro prima esperienza.', true);
+    return;
+  }
+  box.innerHTML = voci.map(g => `
+    <div class="guide-card">
+      <div class="guide-card-body" style="padding:1.5rem 1.3rem">
+        <img class="guide-card-avatar" style="position:static;margin-bottom:0.8rem"
+             src="${esc2(g.foto || avatarIniziali(g.nome, ''))}" alt="${esc2(g.nome)}">
+        <div class="guide-card-name">${esc2(g.nome)}</div>
+        <div class="guide-card-city">📍 ${esc2([...g.citta].join(', '))}</div>
+        <div class="guide-card-tags">
+          <span class="guide-tag terra">${g.n} ${g.n === 1 ? 'esperienza' : 'esperienze'}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderConteggi() {
+  const tutte = Object.values(CATALOGO);
+  document.getElementById('statEsperienze').textContent = tutte.length;
+  document.getElementById('statGuide').textContent = new Set(tutte.map(e => e.autoreUid)).size;
+  document.getElementById('statCitta').textContent = new Set(tutte.map(e => e.citta.toLowerCase())).size;
+
+  document.querySelectorAll('.cat-card').forEach(c => {
+    const n = tutte.filter(e => e.categoria === c.dataset.cat).length;
+    const el = c.querySelector('.cat-count');
+    if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
+  });
+
+  document.querySelectorAll('.dest-name').forEach(d => {
+    const n = tutte.filter(e => e.citta.toLowerCase().includes(d.dataset.citta.toLowerCase())).length;
+    const el = d.parentElement.querySelector('.dest-count');
+    if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
+  });
+}
+
+function renderTutto() {
+  renderEvidenza();
+  window.renderTutte();
+  renderGuide();
+  renderConteggi();
+  aggiornaMappa();
+  aggiornaCuori();
+}
+
+/* ---------- Click delegati sulle card generate ---------- */
+document.addEventListener('click', e => {
+  const elimina = e.target.closest('[data-elimina]');
+  if (elimina) {
+    e.stopPropagation();
+    eliminaEsperienza(elimina.dataset.elimina);
+    return;
+  }
+  const cuore = e.target.closest('.exp-wishlist');
+  if (cuore) { e.stopPropagation(); togglePreferito(cuore); return; }
+
+  const card = e.target.closest('.exp-card, .trending-card');
+  if (card && card.dataset.expId) openExpDetail(card.dataset.expId);
+});
+
+/* ---------- Pubblicazione ---------- */
+window.apriPubblica = () => {
+  if (!auth.currentUser) {
+    openModal('signup');
+    showAuthAlert('Registrati per pubblicare la tua esperienza.');
+    return;
+  }
+  document.getElementById('pubAlert').className = 'auth-alert';
+  document.getElementById('pubblicaOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+};
+window.chiudiPubblica = () => {
+  document.getElementById('pubblicaOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+};
+document.getElementById('pubblicaOverlay').addEventListener('click', function (e) {
+  if (e.target === this) chiudiPubblica();
+});
+['linkPubblica1', 'linkPubblica2'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.onclick = ev => { ev.preventDefault(); apriPubblica(); };
+});
+
+document.getElementById('pDescrizione').addEventListener('input', e => {
+  document.getElementById('pConta').textContent = e.target.value.length;
+});
+
+function avvisoPub(msg, ok) {
+  const el = document.getElementById('pubAlert');
+  el.textContent = msg;
+  el.className = 'auth-alert show ' + (ok ? 'success' : 'error');
+  el.scrollIntoView({ block: 'nearest' });
+}
+
+document.getElementById('btnPubblica').addEventListener('click', async () => {
+  const user = auth.currentUser;
+  if (!user) return apriPubblica();
+
+  const val = id => document.getElementById(id).value.trim();
+  const titolo = val('pTitolo'), citta = val('pCitta'), descrizione = val('pDescrizione');
+  const prezzo = parseInt(val('pPrezzo')), maxPersone = parseInt(val('pMax'));
+  const durata = val('pDurata'), lingue = val('pLingue') || 'IT';
+
+  if (titolo.length < 8)      return avvisoPub('Il titolo è troppo corto: descrivi cosa farete.');
+  if (!citta)                 return avvisoPub('Indica la città.');
+  if (!prezzo || prezzo < 1)  return avvisoPub('Inserisci un prezzo valido.');
+  if (!maxPersone || maxPersone < 1) return avvisoPub('Indica quante persone puoi accogliere.');
+  if (!durata)                return avvisoPub('Indica la durata.');
+  if (descrizione.length < 40) return avvisoPub('La descrizione è troppo breve. Racconta qualcosa in più.');
+
+  const btn = document.getElementById('btnPubblica');
+  setLoading(btn, true, 'Cerco il luogo...');
+
+  // Risolvi le coordinate una volta sola, qui: la mappa poi le legge dal documento
+  // Se l'utente ha scelto dalla lista usiamo quelle coordinate,
+  // altrimenti risolviamo il testo digitato.
+  let geo = esitoGeo;
+  if (!geo) geo = await geocodifica(citta);
+
+  setLoading(btn, false);
+  setLoading(btn, true, 'Pubblicazione...');
+  try {
+    await addDoc(refEsperienze(), {
+      lat: geo ? geo.lat : null,
+      lng: geo ? geo.lng : null,
+      luogoCompleto: geo ? geo.nome : citta,
+      titolo, citta, descrizione, prezzo, maxPersone, durata, lingue,
+      categoria: val('pCategoria') || document.getElementById('pCategoria').value,
+      orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean),
+      incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean),
+      foto: val('pFoto'),
+      autoreUid: user.uid,
+      autoreNome: user.displayName || user.email.split('@')[0],
+      autoreFoto: user.photoURL || '',
+      creato: serverTimestamp()
+    });
+    avvisoPub('Esperienza pubblicata.', true);
+    ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso','pFoto']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pConta').textContent = '0';
+    esitoCitta.textContent = '';
+    esitoGeo = null;
+    chiudiProposte();
+    await caricaEsperienze();
+    setTimeout(() => { chiudiPubblica(); toast('La tua esperienza è online', true); }, 1200);
+  } catch (e) {
+    console.error(e);
+    avvisoPub('Pubblicazione non riuscita. ' + spiegaDb(e));
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+async function eliminaEsperienza(id) {
+  if (!confirm('Rimuovere questa esperienza? L\'operazione non si annulla.')) return;
+  try {
+    await deleteDoc(doc(db, 'esperienze', id));
+    toast('Esperienza rimossa');
+    await caricaEsperienze();
+  } catch (e) {
+    console.error(e);
+    toast('Non riesco a rimuoverla. Riprova.');
+  }
+}
+
+
+/* ============================================================
+   GEOCODIFICA — da nome di luogo a coordinate (Nominatim / OSM)
+   Nessuna chiave richiesta. Politica d'uso: max 1 richiesta al secondo,
+   quindi risolviamo alla pubblicazione e salviamo le coordinate sul
+   documento, invece di interrogare il servizio a ogni visita.
+   ============================================================ */
+
+// Città note: risposta immediata, zero richieste di rete
+const COORD_NOTE = {
+  roma:[41.9028,12.4964], milano:[45.4642,9.19], napoli:[40.8518,14.2681],
+  torino:[45.0703,7.6869], firenze:[43.7696,11.2558], venezia:[45.4408,12.3155],
+  bologna:[44.4949,11.3426], palermo:[38.1157,13.3615], genova:[44.4056,8.9463],
+  bari:[41.1171,16.8719], catania:[37.5079,15.083], verona:[45.4384,10.9916]
+};
+
+const CACHE_GEO = 'lg_geo_v1';
+const leggiCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_GEO)) || {}; } catch { return {}; } };
+const scriviCache = c => { try { localStorage.setItem(CACHE_GEO, JSON.stringify(c)); } catch {} };
+
+let ultimaChiamataGeo = 0;
+
+async function geocodifica(luogo) {
+  const chiave = (luogo || '').trim().toLowerCase();
+  if (!chiave) return null;
+
+  if (COORD_NOTE[chiave]) return { lat: COORD_NOTE[chiave][0], lng: COORD_NOTE[chiave][1], nome: luogo };
+
+  const cache = leggiCache();
+  if (cache[chiave]) return cache[chiave];
+
+  // Rispetta il limite di una richiesta al secondo
+  const attesa = 1100 - (Date.now() - ultimaChiamataGeo);
+  if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
+  ultimaChiamataGeo = Date.now();
+
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search'
+      + '?format=json&limit=1&addressdetails=1&accept-language=it'
+      + '&q=' + encodeURIComponent(luogo);
+    const risposta = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!risposta.ok) return null;
+    const dati = await risposta.json();
+    if (!dati.length) return null;
+
+    const r = dati[0];
+    const esito = {
+      lat: parseFloat(r.lat),
+      lng: parseFloat(r.lon),
+      nome: r.display_name.split(',').slice(0, 2).join(',').trim()
+    };
+    cache[chiave] = esito;
+    scriviCache(cache);
+    return esito;
+  } catch (e) {
+    console.warn('Geocodifica fallita per', luogo, e);
+    return null;
+  }
+}
+
+/* ---------- Autocompletamento del luogo ---------- */
+
+const ICONE_LUOGO = {
+  city: '🏙', town: '🏘', village: '🏡', hamlet: '🏡', suburb: '🏙',
+  neighbourhood: '🏙', quarter: '🏙', island: '🏝', county: '🗺',
+  state: '🗺', region: '🗺', municipality: '🏛', administrative: '🏛'
+};
+
+const campoCitta   = document.getElementById('pCitta');
+const listaCitta   = document.getElementById('pCittaLista');
+const spinnerCitta = document.getElementById('pCittaSpinner');
+const esitoCitta   = document.getElementById('pCittaEsito');
+
+let esitoGeo = null;        // luogo confermato dall'utente
+let propostePos = -1;       // indice selezionato con le frecce
+let proposteCorrenti = [];
+let timerDigitazione = null;
+let richiestaInCorso = null;
+
+/* Cerca più corrispondenze (non una sola come geocodifica) */
+async function cercaLuoghi(testo) {
+  const q = testo.trim();
+  if (q.length < 2) return [];
+
+  // Annulla la richiesta precedente: conta solo l'ultima digitazione
+  if (richiestaInCorso) richiestaInCorso.abort();
+  richiestaInCorso = new AbortController();
+
+  const url = 'https://nominatim.openstreetmap.org/search'
+    + '?format=json&limit=6&addressdetails=1&accept-language=it'
+    + '&q=' + encodeURIComponent(q);
+
+  const r = await fetch(url, { signal: richiestaInCorso.signal });
+  if (!r.ok) return [];
+  const dati = await r.json();
+
+  return dati.map(v => {
+    const a = v.address || {};
+    const nome = a.city || a.town || a.village || a.hamlet || a.suburb
+              || a.municipality || a.county || v.name
+              || v.display_name.split(',')[0];
+    const contesto = [a.county, a.state, a.country].filter(Boolean).join(', ');
+    return {
+      nome,
+      dettaglio: contesto || v.display_name.split(',').slice(1, 4).join(',').trim(),
+      icona: ICONE_LUOGO[v.type] || ICONE_LUOGO[v.class] || '📍',
+      lat: parseFloat(v.lat),
+      lng: parseFloat(v.lon)
+    };
+  });
+}
+
+function mostraProposte(voci) {
+  proposteCorrenti = voci;
+  propostePos = -1;
+
+  if (!voci.length) {
+    listaCitta.innerHTML = '<div class="ac-vuoto">Nessun luogo trovato</div>';
+    listaCitta.classList.add('open');
+    campoCitta.setAttribute('aria-expanded', 'true');
+    return;
+  }
+
+  listaCitta.innerHTML = voci.map((v, i) => `
+    <li class="ac-item" role="option" data-i="${i}">
+      <span class="ac-item-icona">${v.icona}</span>
+      <span class="ac-item-testo">
+        <span class="ac-item-nome">${esc2(v.nome)}</span>
+        <span class="ac-item-dettaglio">${esc2(v.dettaglio)}</span>
+      </span>
+    </li>`).join('');
+
+  listaCitta.classList.add('open');
+  campoCitta.setAttribute('aria-expanded', 'true');
+
+  listaCitta.querySelectorAll('.ac-item').forEach(el => {
+    // mousedown, non click: precede il blur del campo
+    el.addEventListener('mousedown', ev => {
+      ev.preventDefault();
+      scegliProposta(+el.dataset.i);
+    });
+  });
+}
+
+function chiudiProposte() {
+  listaCitta.classList.remove('open');
+  campoCitta.setAttribute('aria-expanded', 'false');
+  propostePos = -1;
+}
+
+function scegliProposta(i) {
+  const v = proposteCorrenti[i];
+  if (!v) return;
+  campoCitta.value = v.nome;
+  esitoGeo = { lat: v.lat, lng: v.lng, nome: v.nome + (v.dettaglio ? ', ' + v.dettaglio : '') };
+  esitoCitta.textContent = '📍 ' + esitoGeo.nome;
+  esitoCitta.style.color = 'var(--moss)';
+  chiudiProposte();
+}
+
+function evidenzia(nuovo) {
+  const voci = listaCitta.querySelectorAll('.ac-item');
+  if (!voci.length) return;
+  propostePos = (nuovo + voci.length) % voci.length;
+  voci.forEach((el, i) => el.classList.toggle('attivo', i === propostePos));
+  voci[propostePos].scrollIntoView({ block: 'nearest' });
+}
+
+campoCitta.addEventListener('input', () => {
+  esitoGeo = null;
+  esitoCitta.textContent = '';
+  clearTimeout(timerDigitazione);
+
+  const q = campoCitta.value.trim();
+  if (q.length < 2) { chiudiProposte(); spinnerCitta.classList.remove('attivo'); return; }
+
+  // Attesa dopo l'ultimo tasto: evita una richiesta per ogni lettera
+  // e rispetta il limite di una al secondo di Nominatim.
+  timerDigitazione = setTimeout(async () => {
+    spinnerCitta.classList.add('attivo');
+    try {
+      mostraProposte(await cercaLuoghi(q));
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Ricerca luogo:', e);
+    } finally {
+      spinnerCitta.classList.remove('attivo');
+    }
+  }, 550);
+});
+
+campoCitta.addEventListener('keydown', e => {
+  const aperta = listaCitta.classList.contains('open');
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (aperta) evidenzia(propostePos + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (aperta) evidenzia(propostePos - 1); }
+  else if (e.key === 'Enter') {
+    if (aperta && propostePos >= 0) { e.preventDefault(); scegliProposta(propostePos); }
+  }
+  else if (e.key === 'Escape') { chiudiProposte(); }
+});
+
+campoCitta.addEventListener('blur', () => setTimeout(chiudiProposte, 120));
+
+/* Risolve le esperienze già pubblicate che non hanno coordinate */
+async function completaCoordinateMancanti() {
+  const daRisolvere = Object.entries(CATALOGO).filter(([, e]) => !e.lat && !COORD_NOTE[e.citta.trim().toLowerCase()]);
+  if (!daRisolvere.length) return;
+
+  let cambiato = false;
+  for (const [id, e] of daRisolvere) {
+    const r = await geocodifica(e.citta);
+    if (r) { CATALOGO[id].lat = r.lat; CATALOGO[id].lng = r.lng; cambiato = true; }
+  }
+  if (cambiato) aggiornaMappa();
+}
+
+/* ---------- Mappa alimentata dalle esperienze ---------- */
+let mappaMarker = [];
+
+function aggiornaMappa() {
+  const leafletMap = window.leafletMap;
+  if (!leafletMap) return;
+  mappaMarker.forEach(m => leafletMap.removeLayer(m));
+  mappaMarker = [];
+
+  const voci = Object.entries(CATALOGO)
+    .map(([id, e]) => {
+      // priorità: coordinate salvate sul documento, poi città note
+      const c = (e.lat && e.lng) ? [e.lat, e.lng] : COORD_NOTE[e.citta.trim().toLowerCase()];
+      return { id, e, c };
+    })
+    .filter(v => v.c);
+
+  const lista = document.getElementById('mapExpList');
+  const sub = document.getElementById('mapSidebarSub');
+
+  if (!voci.length) {
+    lista.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--warm-gray);font-size:0.85rem;line-height:1.6">
+      Nessuna esperienza da mostrare sulla mappa.</div>`;
+    sub.textContent = 'Nessuna esperienza';
+    return;
+  }
+
+  sub.textContent = voci.length + (voci.length === 1 ? ' esperienza' : ' esperienze');
+  lista.innerHTML = voci.map((v, i) => `
+    <div class="map-exp-item${i === 0 ? ' selected' : ''}" data-idx="${i}">
+      <img loading="lazy" src="${esc2(v.e.img[0])}" alt="${esc2(v.e.titolo)}">
+      <div class="map-exp-info">
+        <div class="map-exp-name">${esc2(v.e.titolo)}</div>
+        <div class="map-exp-loc">📍 ${esc2(v.e.citta)}</div>
+        <div class="map-exp-price-row"><span class="map-exp-price">€${v.e.prezzo}</span></div>
+      </div>
+    </div>`).join('');
+
+  lista.querySelectorAll('.map-exp-item').forEach(el =>
+    el.addEventListener('click', () => selezionaMappa(+el.dataset.idx, voci)));
+
+  voci.forEach((v, i) => {
+    const icona = L.divIcon({
+      html: `<div class="lg-marker ${i === 0 ? 'lg-marker-active' : ''}" id="lmarker-${i}">
+               <div class="lg-marker-inner"><span class="lg-marker-emoji">📍</span></div>
+               <div class="lg-marker-price">€${v.e.prezzo}</div>
+             </div>`,
+      className: '', iconSize: [54, 62], iconAnchor: [27, 62], popupAnchor: [0, -66]
+    });
+    const m = L.marker(v.c, { icon: icona }).addTo(leafletMap);
+    m.bindPopup(`
+      <div class="lg-popup">
+        <img src="${esc2(v.e.img[0])}" class="lg-popup-img" alt="">
+        <div class="lg-popup-body">
+          <div class="lg-popup-cat">${ETICHETTE_CAT[v.e.categoria] || ''} · ${esc2(v.e.citta)}</div>
+          <div class="lg-popup-title">${esc2(v.e.titolo)}</div>
+          <div class="lg-popup-meta"><span>⏱ ${esc2(v.e.durata)}</span></div>
+          <div class="lg-popup-footer"><div class="lg-popup-price">€${v.e.prezzo}<small> / pers.</small></div></div>
+          <button class="lg-popup-btn" onclick="openExpDetail('${v.id}')">Vedi dettagli →</button>
+        </div>
+      </div>`, { maxWidth: 260, className: 'lg-leaflet-popup' });
+    m.on('click', () => selezionaMappa(i, voci));
+    mappaMarker.push(m);
+  });
+
+  leafletMap.setView(voci[0].c, voci.length === 1 ? 9 : 6);
+}
+
+function selezionaMappa(idx, voci) {
+  const leafletMap = window.leafletMap;
+  document.querySelectorAll('#mapExpList .map-exp-item').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+    if (i === idx) {
+      const box = el.closest('.map-sidebar');
+      if (box) box.scrollTo({ top: el.offsetTop - box.offsetTop - 8, behavior: 'smooth' });
+    }
+  });
+  mappaMarker.forEach((m, i) => {
+    const el = document.getElementById('lmarker-' + i);
+    if (el) el.classList.toggle('lg-marker-active', i === idx);
+  });
+  leafletMap.setView(voci[idx].c, 9, { animate: true });
+  mappaMarker[idx].openPopup();
+}
+
+/* ---------- Voce di menu: le mie esperienze ---------- */
+if (vociMenu[3]) {
+  vociMenu[3].textContent = '🧭 Pubblica esperienza';
+  vociMenu[3].addEventListener('click', ev => {
+    ev.preventDefault();
+    document.getElementById('userMenu').classList.remove('open');
+    apriPubblica();
+  });
+}
+
+/* ---------- Avvio ---------- */
+caricaEsperienze();
+
+</script>
+</body>
+</html>
