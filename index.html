@@ -3030,7 +3030,11 @@
     position: fixed;
     bottom: 1.5rem;
     left: 50%;
-    transform: translateX(-50%) translateY(120%);
+    /* Nascosto davvero: prima spuntava una pillola nera in fondo alla pagina */
+    transform: translateX(-50%) translateY(calc(100% + 2rem));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     background: var(--charcoal);
     color: white;
     padding: 0.9rem 1.5rem;
@@ -3039,11 +3043,11 @@
     font-weight: 500;
     box-shadow: 0 12px 40px rgba(0,0,0,0.3);
     z-index: 500;
-    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .25s, visibility .35s;
     max-width: calc(100vw - 2.4rem);
     text-align: center;
   }
-  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }
   .toast.ok { background: var(--moss); }
 
   @media (max-width: 640px) {
@@ -3188,6 +3192,107 @@
     display: none;
   }
   .ac-spinner.attivo { display: block; }
+
+  /* ===== RICERCA ===== */
+  /* La barra non taglia più il contenuto: serve per la tendina del "Dove" */
+  .search-bar { overflow: visible; }
+  .search-field { position: relative; }
+  .search-field .ac-list {
+    top: calc(100% + 8px);
+    left: -0.5rem;
+    right: auto;
+    width: max(100%, 320px);
+    max-width: calc(100vw - 2.5rem);
+    z-index: 80;
+  }
+  .search-field .ac-spinner { right: 1.2rem; }
+  .ac-sezione {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm-gray);
+    padding: 0.55rem 0.75rem 0.25rem;
+    list-style: none;
+  }
+  .ac-item-conta {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--terra);
+    font-weight: 600;
+    white-space: nowrap;
+    padding-left: 0.5rem;
+  }
+
+  .search-tags:empty { display: none; }
+  .search-tags-label { font-size: 0.78rem; color: var(--warm-gray); align-self: center; }
+  .tag.attivo { border-color: var(--terra); color: white; background: var(--terra); }
+
+  .risultati-info {
+    display: none;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: -1.2rem 0 1.8rem;
+  }
+  .risultati-info.show { display: flex; }
+  .risultati-conta {
+    font-size: 0.85rem;
+    color: var(--charcoal);
+    font-weight: 500;
+    margin-right: 0.3rem;
+  }
+  .filtro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.5rem 0.35rem 0.8rem;
+    border-radius: 100px;
+    background: rgba(196,96,42,0.08);
+    border: 1px solid rgba(196,96,42,0.25);
+    color: var(--terra);
+    cursor: pointer;
+  }
+  .filtro-chip span {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    background: rgba(196,96,42,0.15);
+  }
+  .filtro-chip:hover span { background: var(--terra); color: white; }
+  .filtro-azzera {
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0.35rem 0.4rem;
+  }
+  .risultati-nota {
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    color: var(--warm-gray);
+    font-style: italic;
+  }
+
+  /* Recensioni: stato vuoto onesto */
+  .reviews-vuote {
+    font-size: 0.88rem;
+    color: var(--warm-gray);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .search-field .ac-list { left: 0; width: 100%; max-width: none; }
+    .risultati-info { margin-top: -0.6rem; }
+  }
 </style>
 </head>
 <body>
@@ -3299,56 +3404,53 @@
 <section class="search-section">
   <div class="search-container">
     <p class="search-label">Cosa vuoi scoprire oggi?</p>
-    <div class="search-bar">
+    <div class="search-bar" role="search">
       <div class="search-field">
         <span class="search-field-icon">📍</span>
         <div class="search-field-content">
-          <span class="search-field-label">Dove</span>
-          <input type="text" placeholder="Città o destinazione...">
+          <label class="search-field-label" for="sDove">Dove / cosa</label>
+          <input type="text" id="sDove" placeholder="Città, zona o parola chiave..."
+                 autocomplete="off" role="combobox" aria-autocomplete="list"
+                 aria-expanded="false" aria-controls="sDoveLista">
         </div>
+        <div class="ac-spinner" id="sDoveSpinner"></div>
+        <ul class="ac-list" id="sDoveLista" role="listbox"></ul>
       </div>
       <div class="search-field">
         <span class="search-field-icon">🧭</span>
         <div class="search-field-content">
-          <span class="search-field-label">Tipo di esperienza</span>
-          <select>
-            <option>Tutte le esperienze</option>
-            <option>Cucina locale</option>
-            <option>Arte e cultura</option>
-            <option>Avventura</option>
-            <option>Tour a piedi</option>
-            <option>Musica e nightlife</option>
+          <label class="search-field-label" for="sCat">Tipo di esperienza</label>
+          <select id="sCat">
+            <option value="all">Tutte le esperienze</option>
+            <option value="cucina">Cucina locale</option>
+            <option value="arte">Arte e cultura</option>
+            <option value="avventura">Avventura</option>
+            <option value="vino">Vino e cibo</option>
+            <option value="musica">Musica</option>
+            <option value="tour">Tour a piedi</option>
           </select>
         </div>
       </div>
       <div class="search-field">
         <span class="search-field-icon">📅</span>
         <div class="search-field-content">
-          <span class="search-field-label">Quando</span>
-          <input type="date">
+          <label class="search-field-label" for="sData">Quando</label>
+          <input type="date" id="sData">
         </div>
       </div>
       <div class="search-field" style="max-width: 140px; border-right: none;">
         <span class="search-field-icon">👥</span>
         <div class="search-field-content">
-          <span class="search-field-label">Persone</span>
-          <input type="number" placeholder="2" min="1" max="20">
+          <label class="search-field-label" for="sPersone">Persone</label>
+          <input type="number" id="sPersone" placeholder="2" min="1" max="50" inputmode="numeric">
         </div>
       </div>
-      <button class="search-btn">
+      <button class="search-btn" id="btnCerca" type="button">
         <span>🔍</span> Cerca
       </button>
     </div>
-    <div class="search-tags">
-      <span>Tendenze:</span>
-      <span class="tag">🍕 Street food</span>
-      <span class="tag">🏛️ Musei nascosti</span>
-      <span class="tag">🌿 Natura</span>
-      <span class="tag">📸 Fotografia</span>
-      <span class="tag">🎭 Teatro</span>
-      <span class="tag">🏄 Sport acquatici</span>
-      <span class="tag">🌙 Vita notturna</span>
-    </div>
+    <!-- Suggerimenti generati dalle esperienze pubblicate -->
+    <div class="search-tags" id="searchTags"></div>
   </div>
 </section>
 
@@ -3356,7 +3458,7 @@
 <section class="categories" id="esperienze">
   <div class="section-header reveal">
     <h2 class="section-title">Esplora per<br><em>categoria</em></h2>
-    <a href="#" class="section-link">Vedi tutte →</a>
+    <a href="#tutte" class="section-link" id="linkVediTutte">Vedi tutte →</a>
   </div>
   <div class="cat-grid reveal">
     <div class="cat-card" data-cat="cucina">
@@ -3434,7 +3536,7 @@
 <section class="destinations" id="destinazioni">
   <div class="section-header reveal">
     <h2 class="section-title">Destinazioni<br><em>popolari</em></h2>
-    <a href="#" class="section-link">Esplora il mondo →</a>
+    <a href="#mappa" class="section-link">Esplora sulla mappa →</a>
   </div>
   <div class="dest-grid reveal">
     <div class="dest-card">
@@ -3587,7 +3689,8 @@
         </div>
 
         <div class="reviews-section">
-          <div class="reviews-header">
+          <p class="reviews-vuote" id="dRecensioniVuote">Ancora nessuna recensione: le prime arriveranno da chi partecipa.</p>
+          <div class="reviews-header" id="dRecensioniHeader" style="display:none">
             <div class="reviews-score" id="dRating"></div>
             <div>
               <div style="display:flex;gap:2px;margin-bottom:0.5rem">
@@ -3653,14 +3756,15 @@
     <button class="filter-btn" data-cat="musica">🎵 Musica</button>
     <button class="filter-btn" data-cat="tour">🗺️ Tour a piedi</button>
   </div>
+  <div class="risultati-info" id="risultatiInfo" aria-live="polite"></div>
   <div class="trending-grid" id="grigliaTutte"></div>
 </section>
 
 <!-- MAP SECTION -->
-<section class="map-section">
+<section class="map-section" id="mappa">
   <div class="section-header reveal">
     <h2 class="section-title">Esplora sulla<br><em>mappa</em></h2>
-    <a href="#" class="section-link">Apri mappa completa →</a>
+    <span class="section-link" id="mappaNota"></span>
   </div>
   <div class="map-wrapper reveal">
     <div class="map-sidebar">
@@ -4235,8 +4339,28 @@
   userMenu.onclick = e => e.stopPropagation();
 
   // EXP DETAIL MODAL — popolato dal catalogo
-  const esc2 = t => String(t ?? '').replace(/[<>&"]/g, c =>
-    ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;' }[c]));
+  // Neutralizza l'HTML in qualsiasi testo che arriva dal database.
+  // Copre anche l'apice singolo, così è sicuro dentro attributi con '...'.
+  const esc2 = t => String(t ?? '').replace(/[<>&"']/g, c =>
+    ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' }[c]));
+
+  // Data di oggi nel fuso dell'utente, formato AAAA-MM-GG
+  function oggiISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  /* ============================================================
+     STATO DELLA RICERCA — condiviso con il modulo Firestore
+     ============================================================ */
+  const RICERCA = {
+    testo: '',       // quello che l'utente ha scritto in "Dove / cosa"
+    luogo: null,     // luogo risolto: { nome, lat, lng, bbox }
+    cat: 'all',
+    data: '',
+    persone: 0
+  };
 
   function openExpDetail(id) {
     const e = CATALOGO[id];
@@ -4256,45 +4380,57 @@
     set('dGruppo', e.gruppo);
     set('dLingue', e.lingue);
     set('dEta', e.eta);
-    document.getElementById('dDescrizione').innerHTML = e.desc;
+
+    // SICUREZZA: la descrizione è testo scritto dagli utenti.
+    // Prima si neutralizza l'HTML, POI si trasformano gli a capo in <br>.
+    document.getElementById('dDescrizione').innerHTML =
+      esc2(e.desc).replace(/\n/g, '<br>');
 
     document.getElementById('dIncluso').innerHTML =
       e.incluso.map(v => '<li>' + esc2(v) + '</li>').join('');
 
     const gf = document.getElementById('dGuidaFoto');
     gf.src = e.guidaFoto; gf.alt = e.guida;
-    set('dGuidaNome', e.guida + ' ✓');
+    set('dGuidaNome', e.guida);
     set('dGuidaSub', e.guidaSub);
 
+    // Recensioni: finché non esistono non mostriamo voti né barre inventate
+    const ciSonoRecensioni = e.recensioni > 0 && e.rec.length > 0;
+    document.getElementById('dRecensioniVuote').style.display = ciSonoRecensioni ? 'none' : '';
+    document.getElementById('dRecensioniHeader').style.display = ciSonoRecensioni ? '' : 'none';
     set('dRating', e.rating);
-    set('dRating2', e.rating + ' · ' + e.recensioni + ' recensioni');
-    set('dNRecensioni', e.recensioni + ' recensioni verificate');
-
-    document.getElementById('dRecensioni').innerHTML = e.rec.map(r => `
-      <div class="review-item">
-        <div class="review-item-header">
-          <img loading="lazy" src="${U}${r[3]}?w=80&q=80" alt="${esc2(r[0])}">
-          <div><div class="review-item-name">${esc2(r[0])}</div>
-               <div class="review-item-date">${esc2(r[1])}</div></div>
-        </div>
-        <div class="review-item-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
-        <div class="review-item-text">${esc2(r[2])}</div>
-      </div>`).join('');
+    set('dRating2', ciSonoRecensioni ? e.rating + ' · ' + e.recensioni + ' recensioni' : 'Nuova esperienza');
+    set('dNRecensioni', e.recensioni + ' recensioni');
+    document.getElementById('dRecensioni').innerHTML = ciSonoRecensioni
+      ? e.rec.map(r => `
+        <div class="review-item">
+          <div class="review-item-header">
+            <div><div class="review-item-name">${esc2(r.nome)}</div>
+                 <div class="review-item-date">${esc2(r.data)}</div></div>
+          </div>
+          <div class="review-item-text">${esc2(r.testo)}</div>
+        </div>`).join('')
+      : '';
 
     document.getElementById('dPrezzo').innerHTML =
-      '€' + e.prezzo + ' <span class="booking-price-sub">/ persona</span>';
+      '€' + esc2(e.prezzo) + ' <span class="booking-price-sub">/ persona</span>';
 
+    // SICUREZZA: anche gli orari sono testo libero
     document.getElementById('bookingTime').innerHTML =
-      e.orari.map(o => '<option>' + o + '</option>').join('');
+      e.orari.map(o => '<option>' + esc2(o) + '</option>').join('');
 
     // Limite partecipanti dal gruppo dichiarato
-    const max = parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    const max = e.maxPersone || parseInt((e.gruppo.match(/\d+/) || [8])[0]);
     const g = document.getElementById('bookingGuests');
     g.max = max;
+    // Se l'utente ha cercato per numero di persone, lo portiamo nel modulo
+    if (RICERCA.persone) g.value = RICERCA.persone;
     if (parseInt(g.value) > max) g.value = max;
 
-    // Non si prenota nel passato
-    document.getElementById('bookingDate').min = new Date().toISOString().split('T')[0];
+    // Non si prenota nel passato (data LOCALE, non UTC)
+    const dataInput = document.getElementById('bookingDate');
+    dataInput.min = oggiISO();
+    if (RICERCA.data && RICERCA.data >= oggiISO()) dataInput.value = RICERCA.data;
 
     updateBooking();
 
@@ -4319,7 +4455,7 @@
   function updateBooking() {
     const e = CATALOGO[espCorrente];
     if (!e) return;
-    const max = parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    const max = e.maxPersone || parseInt((e.gruppo.match(/\d+/) || [8])[0]);
     const input = document.getElementById('bookingGuests');
     let guests = parseInt(input.value) || 1;
     if (guests > max) { guests = max; input.value = max; }
@@ -4334,15 +4470,11 @@
     document.getElementById('bookingGrandTotal').textContent = `€${subtotal + fee}`;
   }
 
-  // FILTRI CATEGORIA
-  let filtroAttivo = 'all';
+  // FILTRI CATEGORIA — stessa fonte di verità della barra di ricerca
   document.getElementById('filterBar').addEventListener('click', e => {
     const btn = e.target.closest('.filter-btn');
     if (!btn) return;
-    document.querySelectorAll('#filterBar .filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    filtroAttivo = btn.dataset.cat;
-    if (window.renderTutte) window.renderTutte();
+    if (window.impostaCategoria) window.impostaCategoria(btn.dataset.cat);
   });
 
   // ===== LEAFLET MAP =====
@@ -4537,7 +4669,8 @@ function setLoading(btn, loading, testo) {
 /* ---------- Avatar generato dalle iniziali ---------- */
 function avatarIniziali(nome, email) {
   const base = (nome || email || 'U').trim();
-  const iniziali = base.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  const iniziali = base.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
+    .replace(/[<>&"']/g, '');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">
     <rect width="80" height="80" fill="#C4602A"/>
     <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
@@ -4955,27 +5088,42 @@ async function caricaEsperienze() {
 
     snap.docs.forEach(d => {
       const v = d.data();
+      // SICUREZZA: il documento può essere stato scritto da chiunque abbia un
+      // account, anche senza passare dal modulo. Qui si normalizza TUTTO:
+      // testi come stringhe, numeri come numeri, link solo se https.
+      const testo = (x, max) => String(x ?? '').slice(0, max || 200);
+      const numero = (x, min, max) => {
+        const n = Number(x);
+        return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : null;
+      };
+      const lista = (x, max) => Array.isArray(x) ? x.slice(0, max).map(s => testo(s, 60)) : [];
+      const foto = urlSicura(v.foto) || FOTO_NEUTRA;
+      const maxPersone = numero(v.maxPersone, 1, 50) || 8;
+      const citta = testo(v.citta, 60) || 'Luogo non indicato';
+
       CATALOGO[d.id] = {
-        titolo: v.titolo,
-        luogo: v.citta,
-        citta: v.citta,
-        categoria: v.categoria,
-        prezzo: v.prezzo,
+        titolo: testo(v.titolo, 90) || 'Esperienza senza titolo',
+        luogo: citta,
+        citta,
+        luogoCompleto: testo(v.luogoCompleto, 160),
+        categoria: ETICHETTE_CAT[v.categoria] ? v.categoria : 'tour',
+        prezzo: numero(v.prezzo, 0, 5000) ?? 0,
         rating: '—',
         recensioni: 0,
-        durata: v.durata,
-        gruppo: 'Max ' + v.maxPersone + ' persone',
-        lingue: v.lingue,
+        durata: testo(v.durata, 20),
+        maxPersone,
+        gruppo: 'Max ' + maxPersone + ' persone',
+        lingue: testo(v.lingue, 40) || 'IT',
         eta: 'Tutte le età',
-        guida: v.autoreNome,
+        guida: testo(v.autoreNome, 60) || 'Guida',
         guidaSub: 'Guida su LocalGuide',
-        guidaFoto: v.autoreFoto || '',
-        autoreUid: v.autoreUid,
-        lat: v.lat, lng: v.lng,
-        img: [v.foto || FOTO_NEUTRA, v.foto || FOTO_NEUTRA, v.foto || FOTO_NEUTRA],
-        orari: (v.orari && v.orari.length) ? v.orari : ['10:00'],
-        desc: (v.descrizione || '').replace(/\n/g, '<br>'),
-        incluso: v.incluso || [],
+        guidaFoto: urlSicura(v.autoreFoto, true) || avatarIniziali(testo(v.autoreNome, 60), ''),
+        autoreUid: testo(v.autoreUid, 128),
+        lat: numero(v.lat, -90, 90), lng: numero(v.lng, -180, 180),
+        img: [foto, foto, foto],
+        orari: lista(v.orari, 8).length ? lista(v.orari, 8) : ['10:00'],
+        desc: testo(v.descrizione, 1200),      // testo grezzo: si neutralizza quando si mostra
+        incluso: lista(v.incluso, 12),
         rec: []
       };
     });
@@ -4989,16 +5137,32 @@ async function caricaEsperienze() {
 }
 window.caricaEsperienze = caricaEsperienze;
 
+/* ---------- Link sicuri ---------- */
+// Accetta solo indirizzi https (e, per gli avatar, le immagini data: generate da noi).
+// Blocca javascript:, http: e qualsiasi altra cosa.
+function urlSicura(u, ammettiDataImg) {
+  const s = String(u ?? '').trim();
+  if (!s) return '';
+  if (ammettiDataImg && /^data:image\/(svg\+xml|png|jpe?g|webp)[;,]/i.test(s)) return s;
+  try {
+    const url = new URL(s);
+    return url.protocol === 'https:' ? url.href : '';
+  } catch { return ''; }
+}
+
 /* ---------- Componenti di rendering ---------- */
-const statoVuoto = (icona, titolo, testo, conBottone) => `
+// statoVuoto riceve solo testi scritti da noi, mai dati dal database
+const statoVuoto = (icona, titolo, testo, conBottone, extraHtml) => `
   <div class="vuoto">
     <div class="vuoto-icona">${icona}</div>
     <div class="vuoto-titolo">${titolo}</div>
     <div class="vuoto-testo">${testo}</div>
+    ${extraHtml || ''}
     ${conBottone ? '<a href="#" class="btn-primary" onclick="apriPubblica();return false;">Pubblica la prima</a>' : ''}
   </div>`;
 
 function cardGrande(id, e) {
+  id = esc2(id);
   return `
     <div class="exp-card featured-large" data-exp-id="${id}">
       <div class="exp-img">
@@ -5025,6 +5189,7 @@ function cardGrande(id, e) {
 }
 
 function cardPiccola(id, e) {
+  id = esc2(id);
   return `
     <div class="exp-card" data-exp-id="${id}">
       <div class="exp-img">
@@ -5044,7 +5209,10 @@ function cardPiccola(id, e) {
     </div>`;
 }
 
-function cardTrending(id, e, mia) {
+function cardTrending(id, e, mia, distanza) {
+  id = esc2(id);
+  const dist = distanza != null
+    ? `<span>↔ ${distanza < 1 ? '< 1' : Math.round(distanza)} km</span>` : '';
   return `
     <div class="trending-card" data-exp-id="${id}" data-cat="${esc2(e.categoria)}">
       <div class="trending-img">
@@ -5054,9 +5222,9 @@ function cardTrending(id, e, mia) {
                 data-price="${e.prezzo}" aria-label="Salva nei preferiti">🤍</button>
       </div>
       <div class="trending-body">
-        <div class="trending-cat">${ETICHETTE_CAT[e.categoria] || e.categoria}</div>
+        <div class="trending-cat">${esc2(ETICHETTE_CAT[e.categoria] || e.categoria)}</div>
         <div class="trending-title">${esc2(e.titolo)}</div>
-        <div class="trending-duration"><span>⏱ ${esc2(e.durata)}</span><span>📍 ${esc2(e.citta)}</span></div>
+        <div class="trending-duration"><span>⏱ ${esc2(e.durata)}</span><span>📍 ${esc2(e.citta)}</span>${dist}</div>
         <div class="trending-footer">
           <div class="trending-price">€${e.prezzo} <small>/ pers.</small></div>
           <div class="trending-rating">${esc2(e.guida)}</div>
@@ -5081,25 +5249,277 @@ function renderEvidenza() {
     i === 0 ? cardGrande(id, e) : cardPiccola(id, e)).join('');
 }
 
+/* ============================================================
+   RICERCA — filtra il catalogo secondo RICERCA (stato globale)
+   ============================================================ */
+
+// Minuscolo e senza accenti: "Città" e "citta" devono coincidere
+const normalizza = s => String(s ?? '').toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+// Distanza in km tra due punti (formula dell'emisenoverso)
+function distanzaKm(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180;
+  const dLat = rad(b[0] - a[0]), dLng = rad(b[1] - a[1]);
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Coordinate di un'esperienza: quelle salvate, altrimenti le città note
+const coordDi = e => (e.lat != null && e.lng != null)
+  ? [e.lat, e.lng] : (COORD_NOTE[normalizza(e.citta)] || null);
+
+// Un'esperienza sta "nel" luogo cercato? Regioni e città grandi hanno un
+// riquadro (bbox); per i punti singoli usiamo un raggio di 20 km.
+function dentroLuogo(c, luogo) {
+  if (!c || !luogo) return false;
+  if (luogo.bbox) {
+    const [s, w, n, e] = luogo.bbox;
+    const m = 0.05;   // ~5 km di margine: le frazioni appena fuori confine contano
+    return c[0] >= s - m && c[0] <= n + m && c[1] >= w - m && c[1] <= e + m;
+  }
+  return distanzaKm(c, [luogo.lat, luogo.lng]) <= 20;
+}
+
+function corrispondeTesto(e, t) {
+  if (!t) return true;
+  const campi = normalizza([e.citta, e.luogoCompleto, e.titolo, e.desc,
+    ETICHETTE_CAT[e.categoria], e.guida, e.incluso.join(' ')].join(' '));
+  // Tutte le parole cercate devono comparire (ordine libero)
+  return t.split(/\s+/).every(p => campi.includes(p));
+}
+
+function filtraCatalogo() {
+  let voci = Object.entries(CATALOGO);
+  if (RICERCA.cat !== 'all') voci = voci.filter(([, e]) => e.categoria === RICERCA.cat);
+  if (RICERCA.persone)       voci = voci.filter(([, e]) => e.maxPersone >= RICERCA.persone);
+
+  const t = normalizza(RICERCA.testo);
+  if (!t) return { voci, modo: 'tutte' };
+
+  const L = RICERCA.luogo;
+  const trovate = voci.filter(([, e]) => corrispondeTesto(e, t) || dentroLuogo(coordDi(e), L));
+  if (trovate.length || !L) return { voci: trovate, modo: 'esatte' };
+
+  // Niente nel luogo cercato: proponiamo le più vicine entro 150 km
+  const centro = [L.lat, L.lng];
+  const vicine = voci
+    .map(([id, e]) => { const c = coordDi(e); return c ? [id, e, distanzaKm(centro, c)] : null; })
+    .filter(v => v && v[2] <= 150)
+    .sort((a, b) => a[2] - b[2])
+    .slice(0, 8);
+  return { voci: vicine.map(v => [v[0], v[1]]), distanze: vicine.map(v => v[2]), modo: 'vicine' };
+}
+
+const ricercaAttiva = () =>
+  !!(RICERCA.testo || RICERCA.cat !== 'all' || RICERCA.persone || RICERCA.data);
+
+function renderInfoRisultati(esito) {
+  const box = document.getElementById('risultatiInfo');
+  if (!ricercaAttiva()) { box.classList.remove('show'); box.innerHTML = ''; return; }
+
+  const chip = (chiave, testo) =>
+    `<button class="filtro-chip" data-togli="${chiave}" aria-label="Togli filtro: ${esc2(testo)}">${esc2(testo)} <span>✕</span></button>`;
+  const chips = [];
+  if (RICERCA.testo)  chips.push(chip('testo', '📍 ' + (RICERCA.luogo ? RICERCA.luogo.nome : RICERCA.testo)));
+  if (RICERCA.cat !== 'all') chips.push(chip('cat', ETICHETTE_CAT[RICERCA.cat]));
+  if (RICERCA.persone) chips.push(chip('persone', '👥 ' + RICERCA.persone + (RICERCA.persone === 1 ? ' persona' : ' persone')));
+  if (RICERCA.data)   chips.push(chip('data', '📅 ' + new Date(RICERCA.data + 'T12:00')
+                        .toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })));
+
+  const n = esito.voci.length;
+  const conta = esito.modo === 'vicine'
+    ? 'Nessuna esperienza lì · le più vicine:'
+    : `${n} ${n === 1 ? 'risultato' : 'risultati'}`;
+
+  // La data non filtra: le esperienze non hanno ancora un calendario.
+  // Lo diciamo invece di fingere un filtro che non c'è.
+  const nota = RICERCA.data
+    ? '<div class="risultati-nota">La data verrà proposta quando apri un\'esperienza: la disponibilità la conferma la guida.</div>'
+    : '';
+
+  box.innerHTML = `<span class="risultati-conta">${conta}</span>${chips.join('')}
+    <button class="filtro-azzera" data-togli="tutto">Azzera</button>${nota}`;
+  box.classList.add('show');
+}
+
 window.renderTutte = function () {
   const box = document.getElementById('grigliaTutte');
   const uid = auth.currentUser ? auth.currentUser.uid : null;
-  let voci = Object.entries(CATALOGO);
-  if (filtroAttivo !== 'all') voci = voci.filter(([, e]) => e.categoria === filtroAttivo);
-
   const tot = Object.keys(CATALOGO).length;
+  const esito = filtraCatalogo();
+  const voci = esito.voci;
+
   document.getElementById('contatoreEsperienze').textContent =
     tot ? `${tot} ${tot === 1 ? 'esperienza' : 'esperienze'}` : '';
+  renderInfoRisultati(esito);
+  aggiornaMappa(voci);
 
   if (!voci.length) {
-    box.innerHTML = tot
-      ? statoVuoto('🔍', 'Nessuna in questa categoria', 'Prova con un altro filtro.', false)
-      : statoVuoto('🧭', 'Ancora nessuna esperienza',
-          'Pubblica la tua e sarà la prima a comparire qui.', true);
+    if (!tot) {
+      box.innerHTML = statoVuoto('🧭', 'Ancora nessuna esperienza',
+        'Pubblica la tua e sarà la prima a comparire qui.', true);
+    } else {
+      box.innerHTML = statoVuoto('🔍', 'Nessun risultato',
+        RICERCA.testo
+          ? 'Non ci sono ancora esperienze per questa ricerca. Prova a togliere un filtro o a cercare una zona più ampia.'
+          : 'Prova a togliere un filtro.',
+        false,
+        '<button class="btn-primary" style="border:none;cursor:pointer;margin-bottom:0.8rem" data-togli="tutto">Mostra tutte</button><br>');
+    }
     return;
   }
-  box.innerHTML = voci.map(([id, e]) => cardTrending(id, e, uid && e.autoreUid === uid)).join('');
+  box.innerHTML = voci.map(([id, e], i) =>
+    cardTrending(id, e, uid && e.autoreUid === uid,
+      esito.modo === 'vicine' ? esito.distanze[i] : null)).join('');
 };
+
+/* ---------- Comandi della ricerca ---------- */
+const campoDove    = document.getElementById('sDove');
+const campoCat     = document.getElementById('sCat');
+const campoData    = document.getElementById('sData');
+const campoPersone = document.getElementById('sPersone');
+campoData.min = oggiISO();
+
+function sincronizzaCampi() {
+  campoDove.value    = RICERCA.luogo ? RICERCA.luogo.nome : RICERCA.testo;
+  campoCat.value     = RICERCA.cat;
+  campoData.value    = RICERCA.data;
+  campoPersone.value = RICERCA.persone || '';
+  document.querySelectorAll('#filterBar .filter-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.cat === RICERCA.cat));
+  document.querySelectorAll('#searchTags .tag').forEach(t =>
+    t.classList.toggle('attivo', !!(
+      (t.dataset.cat && t.dataset.cat === RICERCA.cat) ||
+      (t.dataset.dove && normalizza(t.dataset.dove) === normalizza(RICERCA.testo)))));
+}
+
+function vaiAiRisultati() {
+  const sezione = document.getElementById('tutte');
+  const nav = document.querySelector('nav');
+  const y = sezione.getBoundingClientRect().top + window.scrollY - (nav ? nav.offsetHeight : 0) - 12;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+// Unico punto d'ingresso: aggiorna lo stato, risolve il luogo se serve, ridisegna
+let ricercaSeq = 0;
+async function eseguiRicerca(opzioni = {}) {
+  const seq = ++ricercaSeq;
+  sincronizzaCampi();
+  window.renderTutte();                       // subito: risultati testuali
+  if (opzioni.scorri) vaiAiRisultati();
+
+  // Testo libero non scelto dalla lista: proviamo a capire se è un luogo,
+  // così "Toscana" trova anche le esperienze a Orbetello o Siena.
+  if (RICERCA.testo && !RICERCA.luogo) {
+    const geo = await geocodifica(RICERCA.testo);
+    if (seq !== ricercaSeq) return;           // nel frattempo è partita un'altra ricerca
+    if (geo && normalizza(geo.nome).includes(normalizza(RICERCA.testo).split(' ')[0])) {
+      RICERCA.luogo = { ...geo, nome: RICERCA.testo };
+      window.renderTutte();
+    }
+  }
+}
+
+function leggiCampiECerca() {
+  const testo = campoDove.value.trim();
+  // Se il testo è cambiato rispetto al luogo scelto dalla lista, il luogo non vale più
+  if (!RICERCA.luogo || normalizza(RICERCA.luogo.nome) !== normalizza(testo)) RICERCA.luogo = null;
+  RICERCA.testo   = testo;
+  RICERCA.cat     = campoCat.value;
+  RICERCA.data    = campoData.value && campoData.value >= oggiISO() ? campoData.value : '';
+  RICERCA.persone = Math.max(0, Math.min(50, parseInt(campoPersone.value) || 0));
+  eseguiRicerca({ scorri: true });
+}
+
+window.impostaCategoria = cat => {
+  RICERCA.cat = cat;
+  eseguiRicerca();
+};
+
+function azzeraRicerca(chiave) {
+  if (chiave === 'testo' || chiave === 'tutto') { RICERCA.testo = ''; RICERCA.luogo = null; }
+  if (chiave === 'cat' || chiave === 'tutto')     RICERCA.cat = 'all';
+  if (chiave === 'persone' || chiave === 'tutto') RICERCA.persone = 0;
+  if (chiave === 'data' || chiave === 'tutto')    RICERCA.data = '';
+  eseguiRicerca();
+}
+
+document.getElementById('btnCerca').addEventListener('click', leggiCampiECerca);
+[campoData, campoPersone].forEach(el =>
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') leggiCampiECerca(); }));
+campoCat.addEventListener('change', leggiCampiECerca);
+
+// Chip dei filtri e "Azzera" (delegato: i bottoni vengono ridisegnati)
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-togli]');
+  if (t) { e.preventDefault(); azzeraRicerca(t.dataset.togli); }
+});
+
+// Card categoria → filtra e mostra i risultati
+document.querySelectorAll('.cat-card').forEach(c => {
+  c.addEventListener('click', () => {
+    RICERCA.cat = c.dataset.cat;
+    eseguiRicerca({ scorri: true });
+  });
+});
+
+// Card destinazione → cerca quel luogo
+document.querySelectorAll('.dest-card').forEach(c => {
+  const nome = c.querySelector('.dest-name')?.dataset.citta;
+  if (!nome) return;
+  c.setAttribute('role', 'button');
+  c.setAttribute('tabindex', '0');
+  const vai = () => {
+    RICERCA.testo = nome; RICERCA.luogo = null;
+    eseguiRicerca({ scorri: true });
+  };
+  c.addEventListener('click', vai);
+  c.addEventListener('keydown', e => { if (e.key === 'Enter') vai(); });
+});
+
+// "Vedi tutte" → nessun filtro
+document.getElementById('linkVediTutte').addEventListener('click', e => {
+  e.preventDefault();
+  RICERCA.testo = ''; RICERCA.luogo = null; RICERCA.cat = 'all'; RICERCA.persone = 0; RICERCA.data = '';
+  eseguiRicerca({ scorri: true });
+});
+
+// Suggerimenti sotto la barra: nati dai dati veri, non da una lista inventata
+function renderSuggerimenti() {
+  const box = document.getElementById('searchTags');
+  const tutte = Object.values(CATALOGO);
+  if (!tutte.length) { box.innerHTML = ''; return; }
+
+  const perCitta = {};
+  tutte.forEach(e => {
+    const k = normalizza(e.citta);
+    perCitta[k] = perCitta[k] || { nome: e.citta, n: 0 };
+    perCitta[k].n++;
+  });
+  const citta = Object.values(perCitta).sort((a, b) => b.n - a.n).slice(0, 4);
+  const perCat = {};
+  tutte.forEach(e => { perCat[e.categoria] = (perCat[e.categoria] || 0) + 1; });
+  const cat = Object.entries(perCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  box.innerHTML = '<span class="search-tags-label">Da esplorare:</span>' +
+    citta.map(c => `<button type="button" class="tag" data-dove="${esc2(c.nome)}">📍 ${esc2(c.nome)}</button>`).join('') +
+    cat.map(([k]) => `<button type="button" class="tag" data-cat="${esc2(k)}">${esc2(ETICHETTE_CAT[k])}</button>`).join('');
+  sincronizzaCampi();
+}
+
+document.getElementById('searchTags').addEventListener('click', e => {
+  const t = e.target.closest('.tag');
+  if (!t) return;
+  if (t.dataset.dove) {
+    const giaAttivo = normalizza(RICERCA.testo) === normalizza(t.dataset.dove);
+    RICERCA.testo = giaAttivo ? '' : t.dataset.dove;
+    RICERCA.luogo = null;
+  }
+  if (t.dataset.cat) RICERCA.cat = RICERCA.cat === t.dataset.cat ? 'all' : t.dataset.cat;
+  eseguiRicerca({ scorri: true });
+});
 
 function renderGuide() {
   const box = document.getElementById('grigliaGuide');
@@ -5142,7 +5562,8 @@ function renderConteggi() {
   });
 
   document.querySelectorAll('.dest-name').forEach(d => {
-    const n = tutte.filter(e => e.citta.toLowerCase().includes(d.dataset.citta.toLowerCase())).length;
+    const cerca = normalizza(d.dataset.citta);
+    const n = tutte.filter(e => normalizza(e.citta + ' ' + e.luogoCompleto).includes(cerca)).length;
     const el = d.parentElement.querySelector('.dest-count');
     if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
   });
@@ -5153,7 +5574,7 @@ function renderTutto() {
   window.renderTutte();
   renderGuide();
   renderConteggi();
-  aggiornaMappa();
+  renderSuggerimenti();
   aggiornaCuori();
 }
 
@@ -5218,6 +5639,9 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
   if (titolo.length < 8)      return avvisoPub('Il titolo è troppo corto: descrivi cosa farete.');
   if (!citta)                 return avvisoPub('Indica la città.');
   if (!prezzo || prezzo < 1)  return avvisoPub('Inserisci un prezzo valido.');
+  const fotoInserita = val('pFoto');
+  if (fotoInserita && !urlSicura(fotoInserita))
+    return avvisoPub('Il link della foto deve iniziare con https://');
   if (!maxPersone || maxPersone < 1) return avvisoPub('Indica quante persone puoi accogliere.');
   if (!durata)                return avvisoPub('Indica la durata.');
   if (descrizione.length < 40) return avvisoPub('La descrizione è troppo breve. Racconta qualcosa in più.');
@@ -5242,7 +5666,7 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
       categoria: val('pCategoria') || document.getElementById('pCategoria').value,
       orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean),
       incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean),
-      foto: val('pFoto'),
+      foto: urlSicura(fotoInserita),
       autoreUid: user.uid,
       autoreNome: user.displayName || user.email.split('@')[0],
       autoreFoto: user.photoURL || '',
@@ -5279,10 +5703,11 @@ async function eliminaEsperienza(id) {
 
 
 /* ============================================================
-   GEOCODIFICA — da nome di luogo a coordinate (Nominatim / OSM)
-   Nessuna chiave richiesta. Politica d'uso: max 1 richiesta al secondo,
-   quindi risolviamo alla pubblicazione e salviamo le coordinate sul
-   documento, invece di interrogare il servizio a ogni visita.
+   GEOCODIFICA — da nome di luogo a coordinate (Photon / OSM)
+   Photon (photon.komoot.io) è pensato per l'autocompletamento:
+   Nominatim lo vieta esplicitamente nelle sue regole d'uso.
+   Nota: l'istanza pubblica non accetta lang=it, quindi si usa
+   lang=default, che restituisce i nomi locali (in Italia: italiano).
    ============================================================ */
 
 // Città note: risposta immediata, zero richieste di rete
@@ -5293,40 +5718,91 @@ const COORD_NOTE = {
   bari:[41.1171,16.8719], catania:[37.5079,15.083], verona:[45.4384,10.9916]
 };
 
-const CACHE_GEO = 'lg_geo_v1';
+const CACHE_GEO = 'lg_geo_v2';   // v2: le voci ora includono il riquadro (bbox)
 const leggiCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_GEO)) || {}; } catch { return {}; } };
 const scriviCache = c => { try { localStorage.setItem(CACHE_GEO, JSON.stringify(c)); } catch {} };
 
+const ICONE_LUOGO = {
+  city: '🏙', town: '🏘', village: '🏡', hamlet: '🏡', suburb: '🏙',
+  neighbourhood: '🏙', quarter: '🏙', island: '🏝', archipelago: '🏝',
+  county: '🗺', state: '🗺', region: '🗺', province: '🗺', country: '🗺',
+  municipality: '🏛', administrative: '🏛', locality: '📍', peninsula: '🏞',
+  bay: '🌊', beach: '🏖', peak: '⛰', mountain_range: '⛰', valley: '🏞'
+};
+
+// Scartiamo indirizzi, strade e singoli edifici: qui si cercano luoghi
+const TIPI_SCARTATI = new Set(['house', 'street']);
+const CHIAVI_SCARTATE = new Set(['highway', 'building', 'amenity', 'shop', 'railway', 'office']);
+
+/* Interroga Photon e restituisce luoghi già puliti */
+async function cercaPhoton(testo, { limite = 6, signal } = {}) {
+  const url = 'https://photon.komoot.io/api/?lang=default'
+    + '&limit=' + Math.min(limite + 4, 15)          // ne chiediamo qualcuno in più: alcuni li scartiamo
+    + '&lat=42.5&lon=12.5&zoom=6&location_bias_scale=0.3'   // preferenza per l'Italia, senza escludere il resto
+    + '&q=' + encodeURIComponent(testo);
+  const r = await fetch(url, { signal });
+  if (!r.ok) return [];
+  const dati = await r.json();
+
+  const visti = new Set();
+  return (dati.features || [])
+    .filter(f => {
+      const p = f.properties || {};
+      return !TIPI_SCARTATI.has(p.type) && !CHIAVI_SCARTATE.has(p.osm_key);
+    })
+    .map(f => {
+      const p = f.properties;
+      const [lng, lat] = f.geometry.coordinates;
+      const nome = p.name || p.city || p.county || p.state || testo;
+      const contesto = [p.county, p.state, p.country]
+        .filter((x, i, a) => x && x !== nome && a.indexOf(x) === i).join(', ');
+      // Photon: extent = [ovest, nord, est, sud]. Lo portiamo a [sud, ovest, nord, est].
+      let bbox = null;
+      if (Array.isArray(p.extent) && p.extent.length === 4) {
+        const [x1, y1, x2, y2] = p.extent.map(Number);
+        bbox = [Math.min(y1, y2), Math.min(x1, x2), Math.max(y1, y2), Math.max(x1, x2)];
+      }
+      return {
+        nome,
+        dettaglio: contesto,
+        icona: ICONE_LUOGO[p.osm_value] || ICONE_LUOGO[p.type] || '📍',
+        lat: Number(lat), lng: Number(lng),
+        bbox
+      };
+    })
+    .filter(v => {
+      const k = normalizza(v.nome + '|' + v.dettaglio);
+      if (visti.has(k)) return false;
+      visti.add(k);
+      return Number.isFinite(v.lat) && Number.isFinite(v.lng);
+    })
+    .slice(0, limite);
+}
+
 let ultimaChiamataGeo = 0;
 
+/* Un solo risultato, per la pubblicazione e per la ricerca a testo libero */
 async function geocodifica(luogo) {
-  const chiave = (luogo || '').trim().toLowerCase();
+  const chiave = normalizza(luogo);
   if (!chiave) return null;
 
-  if (COORD_NOTE[chiave]) return { lat: COORD_NOTE[chiave][0], lng: COORD_NOTE[chiave][1], nome: luogo };
+  if (COORD_NOTE[chiave]) return { lat: COORD_NOTE[chiave][0], lng: COORD_NOTE[chiave][1], nome: luogo, bbox: null };
 
   const cache = leggiCache();
   if (cache[chiave]) return cache[chiave];
 
-  // Rispetta il limite di una richiesta al secondo
-  const attesa = 1100 - (Date.now() - ultimaChiamataGeo);
+  // Uso gentile del servizio pubblico: al massimo una richiesta ogni ~0,5 s
+  const attesa = 500 - (Date.now() - ultimaChiamataGeo);
   if (attesa > 0) await new Promise(r => setTimeout(r, attesa));
   ultimaChiamataGeo = Date.now();
 
   try {
-    const url = 'https://nominatim.openstreetmap.org/search'
-      + '?format=json&limit=1&addressdetails=1&accept-language=it'
-      + '&q=' + encodeURIComponent(luogo);
-    const risposta = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!risposta.ok) return null;
-    const dati = await risposta.json();
-    if (!dati.length) return null;
-
-    const r = dati[0];
+    const [r] = await cercaPhoton(luogo, { limite: 1 });
+    if (!r) return null;
     const esito = {
-      lat: parseFloat(r.lat),
-      lng: parseFloat(r.lon),
-      nome: r.display_name.split(',').slice(0, 2).join(',').trim()
+      lat: r.lat, lng: r.lng,
+      nome: r.nome + (r.dettaglio ? ', ' + r.dettaglio : ''),
+      bbox: r.bbox
     };
     cache[chiave] = esito;
     scriviCache(cache);
@@ -5337,185 +5813,218 @@ async function geocodifica(luogo) {
   }
 }
 
-/* ---------- Autocompletamento del luogo ---------- */
+/* ============================================================
+   AUTOCOMPLETAMENTO — un solo componente per due campi:
+   "Città" nel modulo di pubblicazione e "Dove" nella ricerca
+   ============================================================ */
+function collegaAutocompleta({ input, lista, spinner, locali, onScegli, onModifica }) {
+  let proposte = [];
+  let pos = -1;
+  let timer = null;
+  let richiesta = null;
 
-const ICONE_LUOGO = {
-  city: '🏙', town: '🏘', village: '🏡', hamlet: '🏡', suburb: '🏙',
-  neighbourhood: '🏙', quarter: '🏙', island: '🏝', county: '🗺',
-  state: '🗺', region: '🗺', municipality: '🏛', administrative: '🏛'
-};
+  const apri = () => { lista.classList.add('open'); input.setAttribute('aria-expanded', 'true'); };
+  const chiudi = () => { lista.classList.remove('open'); input.setAttribute('aria-expanded', 'false'); pos = -1; };
 
-const campoCitta   = document.getElementById('pCitta');
-const listaCitta   = document.getElementById('pCittaLista');
-const spinnerCitta = document.getElementById('pCittaSpinner');
-const esitoCitta   = document.getElementById('pCittaEsito');
-
-let esitoGeo = null;        // luogo confermato dall'utente
-let propostePos = -1;       // indice selezionato con le frecce
-let proposteCorrenti = [];
-let timerDigitazione = null;
-let richiestaInCorso = null;
-
-/* Cerca più corrispondenze (non una sola come geocodifica) */
-async function cercaLuoghi(testo) {
-  const q = testo.trim();
-  if (q.length < 2) return [];
-
-  // Annulla la richiesta precedente: conta solo l'ultima digitazione
-  if (richiestaInCorso) richiestaInCorso.abort();
-  richiestaInCorso = new AbortController();
-
-  const url = 'https://nominatim.openstreetmap.org/search'
-    + '?format=json&limit=6&addressdetails=1&accept-language=it'
-    + '&q=' + encodeURIComponent(q);
-
-  const r = await fetch(url, { signal: richiestaInCorso.signal });
-  if (!r.ok) return [];
-  const dati = await r.json();
-
-  return dati.map(v => {
-    const a = v.address || {};
-    const nome = a.city || a.town || a.village || a.hamlet || a.suburb
-              || a.municipality || a.county || v.name
-              || v.display_name.split(',')[0];
-    const contesto = [a.county, a.state, a.country].filter(Boolean).join(', ');
-    return {
-      nome,
-      dettaglio: contesto || v.display_name.split(',').slice(1, 4).join(',').trim(),
-      icona: ICONE_LUOGO[v.type] || ICONE_LUOGO[v.class] || '📍',
-      lat: parseFloat(v.lat),
-      lng: parseFloat(v.lon)
-    };
-  });
-}
-
-function mostraProposte(voci) {
-  proposteCorrenti = voci;
-  propostePos = -1;
-
-  if (!voci.length) {
-    listaCitta.innerHTML = '<div class="ac-vuoto">Nessun luogo trovato</div>';
-    listaCitta.classList.add('open');
-    campoCitta.setAttribute('aria-expanded', 'true');
-    return;
-  }
-
-  listaCitta.innerHTML = voci.map((v, i) => `
-    <li class="ac-item" role="option" data-i="${i}">
-      <span class="ac-item-icona">${v.icona}</span>
-      <span class="ac-item-testo">
-        <span class="ac-item-nome">${esc2(v.nome)}</span>
-        <span class="ac-item-dettaglio">${esc2(v.dettaglio)}</span>
-      </span>
-    </li>`).join('');
-
-  listaCitta.classList.add('open');
-  campoCitta.setAttribute('aria-expanded', 'true');
-
-  listaCitta.querySelectorAll('.ac-item').forEach(el => {
-    // mousedown, non click: precede il blur del campo
-    el.addEventListener('mousedown', ev => {
-      ev.preventDefault();
-      scegliProposta(+el.dataset.i);
-    });
-  });
-}
-
-function chiudiProposte() {
-  listaCitta.classList.remove('open');
-  campoCitta.setAttribute('aria-expanded', 'false');
-  propostePos = -1;
-}
-
-function scegliProposta(i) {
-  const v = proposteCorrenti[i];
-  if (!v) return;
-  campoCitta.value = v.nome;
-  esitoGeo = { lat: v.lat, lng: v.lng, nome: v.nome + (v.dettaglio ? ', ' + v.dettaglio : '') };
-  esitoCitta.textContent = '📍 ' + esitoGeo.nome;
-  esitoCitta.style.color = 'var(--moss)';
-  chiudiProposte();
-}
-
-function evidenzia(nuovo) {
-  const voci = listaCitta.querySelectorAll('.ac-item');
-  if (!voci.length) return;
-  propostePos = (nuovo + voci.length) % voci.length;
-  voci.forEach((el, i) => el.classList.toggle('attivo', i === propostePos));
-  voci[propostePos].scrollIntoView({ block: 'nearest' });
-}
-
-campoCitta.addEventListener('input', () => {
-  esitoGeo = null;
-  esitoCitta.textContent = '';
-  clearTimeout(timerDigitazione);
-
-  const q = campoCitta.value.trim();
-  if (q.length < 2) { chiudiProposte(); spinnerCitta.classList.remove('attivo'); return; }
-
-  // Attesa dopo l'ultimo tasto: evita una richiesta per ogni lettera
-  // e rispetta il limite di una al secondo di Nominatim.
-  timerDigitazione = setTimeout(async () => {
-    spinnerCitta.classList.add('attivo');
-    try {
-      mostraProposte(await cercaLuoghi(q));
-    } catch (e) {
-      if (e.name !== 'AbortError') console.warn('Ricerca luogo:', e);
-    } finally {
-      spinnerCitta.classList.remove('attivo');
+  function mostra(voci, conRete) {
+    proposte = voci;
+    pos = -1;
+    if (!voci.length) {
+      if (conRete) { lista.innerHTML = '<li class="ac-vuoto">Nessun luogo trovato</li>'; apri(); }
+      else chiudi();
+      return;
     }
-  }, 550);
-});
-
-campoCitta.addEventListener('keydown', e => {
-  const aperta = listaCitta.classList.contains('open');
-  if (e.key === 'ArrowDown') { e.preventDefault(); if (aperta) evidenzia(propostePos + 1); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); if (aperta) evidenzia(propostePos - 1); }
-  else if (e.key === 'Enter') {
-    if (aperta && propostePos >= 0) { e.preventDefault(); scegliProposta(propostePos); }
+    let sezione = null;
+    lista.innerHTML = voci.map((v, i) => {
+      const titolo = v.sezione && v.sezione !== sezione
+        ? `<li class="ac-sezione" role="presentation">${esc2(v.sezione)}</li>` : '';
+      sezione = v.sezione || sezione;
+      return titolo + `
+        <li class="ac-item" role="option" data-i="${i}">
+          <span class="ac-item-icona">${v.icona}</span>
+          <span class="ac-item-testo">
+            <span class="ac-item-nome">${esc2(v.nome)}</span>
+            ${v.dettaglio ? `<span class="ac-item-dettaglio">${esc2(v.dettaglio)}</span>` : ''}
+          </span>
+          ${v.conta ? `<span class="ac-item-conta">${esc2(v.conta)}</span>` : ''}
+        </li>`;
+    }).join('');
+    apri();
+    lista.querySelectorAll('.ac-item').forEach(el => {
+      // mousedown, non click: precede il blur del campo
+      el.addEventListener('mousedown', ev => { ev.preventDefault(); scegli(+el.dataset.i); });
+    });
   }
-  else if (e.key === 'Escape') { chiudiProposte(); }
-});
 
-campoCitta.addEventListener('blur', () => setTimeout(chiudiProposte, 120));
+  function scegli(i) {
+    const v = proposte[i];
+    if (!v) return;
+    chiudi();
+    onScegli(v);
+  }
+
+  function evidenzia(nuovo) {
+    const voci = lista.querySelectorAll('.ac-item');
+    if (!voci.length) return;
+    pos = (nuovo + voci.length) % voci.length;
+    voci.forEach((el, i) => el.classList.toggle('attivo', i === pos));
+    voci[pos].scrollIntoView({ block: 'nearest' });
+  }
+
+  input.addEventListener('input', () => {
+    if (onModifica) onModifica();
+    clearTimeout(timer);
+    const q = input.value.trim();
+
+    // Proposte locali (esperienze già pubblicate): istantanee, senza rete
+    const vociLocali = locali ? locali(q) : [];
+    if (q.length < 2) {
+      spinner.classList.remove('attivo');
+      if (richiesta) richiesta.abort();
+      mostra(vociLocali, false);
+      return;
+    }
+    mostra(vociLocali, false);
+
+    // Attesa dopo l'ultimo tasto: una richiesta per parola, non per lettera
+    timer = setTimeout(async () => {
+      if (richiesta) richiesta.abort();
+      richiesta = new AbortController();
+      spinner.classList.add('attivo');
+      try {
+        const remoti = (await cercaPhoton(q, { signal: richiesta.signal }))
+          .map(v => ({ ...v, sezione: vociLocali.length ? 'Altri luoghi' : null }));
+        // Non ripetere un luogo già presente tra le proposte locali
+        const giaLocali = new Set(vociLocali.map(v => normalizza(v.nome)));
+        mostra([...vociLocali, ...remoti.filter(v => !giaLocali.has(normalizza(v.nome)))], true);
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          console.warn('Ricerca luogo:', e);
+          mostra(vociLocali, false);
+        }
+      } finally {
+        spinner.classList.remove('attivo');
+      }
+    }, 350);
+  });
+
+  input.addEventListener('keydown', e => {
+    const aperta = lista.classList.contains('open');
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (aperta) evidenzia(pos + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (aperta) evidenzia(pos - 1); }
+    else if (e.key === 'Enter') {
+      if (aperta && pos >= 0) { e.preventDefault(); e.stopImmediatePropagation(); scegli(pos); }
+    }
+    else if (e.key === 'Escape') { chiudi(); }
+  });
+
+  input.addEventListener('blur', () => setTimeout(chiudi, 120));
+  return { chiudi };
+}
+
+/* ---------- Campo "Città" del modulo di pubblicazione ---------- */
+const campoCitta = document.getElementById('pCitta');
+const esitoCitta = document.getElementById('pCittaEsito');
+let esitoGeo = null;        // luogo confermato dall'utente
+
+const acCitta = collegaAutocompleta({
+  input: campoCitta,
+  lista: document.getElementById('pCittaLista'),
+  spinner: document.getElementById('pCittaSpinner'),
+  onModifica: () => { esitoGeo = null; esitoCitta.textContent = ''; },
+  onScegli: v => {
+    campoCitta.value = v.nome;
+    esitoGeo = { lat: v.lat, lng: v.lng, nome: v.nome + (v.dettaglio ? ', ' + v.dettaglio : '') };
+    esitoCitta.textContent = '📍 ' + esitoGeo.nome;
+    esitoCitta.style.color = 'var(--moss)';
+  }
+});
+const chiudiProposte = () => acCitta.chiudi();
+
+/* ---------- Campo "Dove" della ricerca ---------- */
+// Prima le città dove ci sono davvero esperienze, poi i luoghi di Photon
+function cittaConEsperienze(q) {
+  const t = normalizza(q);
+  const perCitta = {};
+  Object.values(CATALOGO).forEach(e => {
+    const k = normalizza(e.citta);
+    if (t && !normalizza(e.citta + ' ' + e.luogoCompleto).includes(t)) return;
+    if (!perCitta[k]) perCitta[k] = { nome: e.citta, dettaglio: '', n: 0, c: coordDi(e) };
+    perCitta[k].n++;
+  });
+  return Object.values(perCitta)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, t ? 4 : 6)
+    .map(v => ({
+      nome: v.nome, dettaglio: v.dettaglio, icona: '🧭',
+      conta: v.n + (v.n === 1 ? ' esperienza' : ' esperienze'),
+      sezione: 'Con esperienze',
+      lat: v.c ? v.c[0] : null, lng: v.c ? v.c[1] : null, bbox: null, locale: true
+    }));
+}
+
+collegaAutocompleta({
+  input: campoDove,
+  lista: document.getElementById('sDoveLista'),
+  spinner: document.getElementById('sDoveSpinner'),
+  locali: cittaConEsperienze,
+  onModifica: () => { RICERCA.luogo = null; },
+  onScegli: v => {
+    campoDove.value = v.nome;
+    RICERCA.testo = v.nome;
+    // Una città "locale" si cerca per nome (e dintorni se ha coordinate);
+    // un luogo di Photon porta con sé il suo riquadro geografico.
+    RICERCA.luogo = (v.lat != null && v.lng != null)
+      ? { nome: v.nome, lat: v.lat, lng: v.lng, bbox: v.bbox } : null;
+    leggiCampiECerca();
+  }
+});
+// Invio senza scegliere dalla lista: cerca il testo così com'è
+campoDove.addEventListener('keydown', e => { if (e.key === 'Enter') leggiCampiECerca(); });
+// Campo vuoto e in primo piano: mostra subito dove ci sono esperienze
+campoDove.addEventListener('focus', () => {
+  if (!campoDove.value.trim()) campoDove.dispatchEvent(new Event('input'));
+});
 
 /* Risolve le esperienze già pubblicate che non hanno coordinate */
 async function completaCoordinateMancanti() {
-  const daRisolvere = Object.entries(CATALOGO).filter(([, e]) => !e.lat && !COORD_NOTE[e.citta.trim().toLowerCase()]);
+  const daRisolvere = Object.entries(CATALOGO).filter(([, e]) => !coordDi(e));
   if (!daRisolvere.length) return;
 
   let cambiato = false;
-  for (const [id, e] of daRisolvere) {
+  for (const [id, e] of daRisolvere.slice(0, 10)) {   // tetto: non martellare il servizio
     const r = await geocodifica(e.citta);
     if (r) { CATALOGO[id].lat = r.lat; CATALOGO[id].lng = r.lng; cambiato = true; }
   }
-  if (cambiato) aggiornaMappa();
+  if (cambiato) window.renderTutte();   // i risultati "vicino a" possono cambiare
 }
 
-/* ---------- Mappa alimentata dalle esperienze ---------- */
+/* ---------- Mappa alimentata dai risultati della ricerca ---------- */
 let mappaMarker = [];
 
-function aggiornaMappa() {
+function aggiornaMappa(vociFiltrate) {
   const leafletMap = window.leafletMap;
   if (!leafletMap) return;
   mappaMarker.forEach(m => leafletMap.removeLayer(m));
   mappaMarker = [];
 
-  const voci = Object.entries(CATALOGO)
-    .map(([id, e]) => {
-      // priorità: coordinate salvate sul documento, poi città note
-      const c = (e.lat && e.lng) ? [e.lat, e.lng] : COORD_NOTE[e.citta.trim().toLowerCase()];
-      return { id, e, c };
-    })
+  const voci = (vociFiltrate || Object.entries(CATALOGO))
+    .map(([id, e]) => ({ id, e, c: coordDi(e) }))
     .filter(v => v.c);
 
   const lista = document.getElementById('mapExpList');
   const sub = document.getElementById('mapSidebarSub');
+  document.getElementById('mappaNota').textContent =
+    ricercaAttiva() ? 'Mostra i risultati della ricerca' : '';
 
   if (!voci.length) {
     lista.innerHTML = `<div style="padding:2rem 1.2rem;text-align:center;color:var(--warm-gray);font-size:0.85rem;line-height:1.6">
-      Nessuna esperienza da mostrare sulla mappa.</div>`;
+      ${ricercaAttiva() ? 'Nessun risultato da mostrare sulla mappa.' : 'Nessuna esperienza da mostrare sulla mappa.'}</div>`;
     sub.textContent = 'Nessuna esperienza';
+    // Se si è cercato un luogo, la mappa ci va comunque
+    const L0 = RICERCA.luogo;
+    if (L0 && L0.bbox) leafletMap.fitBounds([[L0.bbox[0], L0.bbox[1]], [L0.bbox[2], L0.bbox[3]]]);
+    else if (L0) leafletMap.setView([L0.lat, L0.lng], 10);
     return;
   }
 
@@ -5526,7 +6035,7 @@ function aggiornaMappa() {
       <div class="map-exp-info">
         <div class="map-exp-name">${esc2(v.e.titolo)}</div>
         <div class="map-exp-loc">📍 ${esc2(v.e.citta)}</div>
-        <div class="map-exp-price-row"><span class="map-exp-price">€${v.e.prezzo}</span></div>
+        <div class="map-exp-price-row"><span class="map-exp-price">€${esc2(v.e.prezzo)}</span></div>
       </div>
     </div>`).join('');
 
@@ -5537,27 +6046,33 @@ function aggiornaMappa() {
     const icona = L.divIcon({
       html: `<div class="lg-marker ${i === 0 ? 'lg-marker-active' : ''}" id="lmarker-${i}">
                <div class="lg-marker-inner"><span class="lg-marker-emoji">📍</span></div>
-               <div class="lg-marker-price">€${v.e.prezzo}</div>
+               <div class="lg-marker-price">€${esc2(v.e.prezzo)}</div>
              </div>`,
       className: '', iconSize: [54, 62], iconAnchor: [27, 62], popupAnchor: [0, -66]
     });
     const m = L.marker(v.c, { icon: icona }).addTo(leafletMap);
-    m.bindPopup(`
-      <div class="lg-popup">
+    // SICUREZZA: niente onclick con l'id dentro l'HTML. Il popup riceve un
+    // elemento DOM (non una stringa, che Leaflet ricostruirebbe perdendo il
+    // collegamento) e il bottone riceve l'id come valore JavaScript.
+    const pop = document.createElement('div');
+    pop.className = 'lg-popup';
+    pop.innerHTML = `
         <img src="${esc2(v.e.img[0])}" class="lg-popup-img" alt="">
         <div class="lg-popup-body">
-          <div class="lg-popup-cat">${ETICHETTE_CAT[v.e.categoria] || ''} · ${esc2(v.e.citta)}</div>
+          <div class="lg-popup-cat">${esc2(ETICHETTE_CAT[v.e.categoria] || '')} · ${esc2(v.e.citta)}</div>
           <div class="lg-popup-title">${esc2(v.e.titolo)}</div>
           <div class="lg-popup-meta"><span>⏱ ${esc2(v.e.durata)}</span></div>
-          <div class="lg-popup-footer"><div class="lg-popup-price">€${v.e.prezzo}<small> / pers.</small></div></div>
-          <button class="lg-popup-btn" onclick="openExpDetail('${v.id}')">Vedi dettagli →</button>
-        </div>
-      </div>`, { maxWidth: 260, className: 'lg-leaflet-popup' });
+          <div class="lg-popup-footer"><div class="lg-popup-price">€${esc2(v.e.prezzo)}<small> / pers.</small></div></div>
+          <button class="lg-popup-btn" type="button">Vedi dettagli →</button>
+        </div>`;
+    pop.querySelector('.lg-popup-btn').addEventListener('click', () => openExpDetail(v.id));
+    m.bindPopup(pop, { maxWidth: 260, className: 'lg-leaflet-popup' });
     m.on('click', () => selezionaMappa(i, voci));
     mappaMarker.push(m);
   });
 
-  leafletMap.setView(voci[0].c, voci.length === 1 ? 9 : 6);
+  if (voci.length === 1) leafletMap.setView(voci[0].c, 10);
+  else leafletMap.fitBounds(L.latLngBounds(voci.map(v => v.c)), { padding: [50, 50], maxZoom: 11 });
 }
 
 function selezionaMappa(idx, voci) {
@@ -5573,7 +6088,7 @@ function selezionaMappa(idx, voci) {
     const el = document.getElementById('lmarker-' + i);
     if (el) el.classList.toggle('lg-marker-active', i === idx);
   });
-  leafletMap.setView(voci[idx].c, 9, { animate: true });
+  leafletMap.setView(voci[idx].c, 10, { animate: true });
   mappaMarker[idx].openPopup();
 }
 
@@ -5587,8 +6102,9 @@ if (vociMenu[3]) {
   });
 }
 
-/* ---------- Avvio ---------- */
-caricaEsperienze();
+/* ---------- Avvio ----------
+   Il caricamento parte da initMap (DOMContentLoaded), quando la mappa esiste:
+   chiamarlo anche qui scaricava il catalogo due volte. */
 
 </script>
 </body>
