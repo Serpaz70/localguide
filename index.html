@@ -3407,6 +3407,141 @@
     .search-field .ac-list { left: 0; width: 100%; max-width: none; }
     .risultati-info { margin-top: -0.6rem; }
   }
+  /* ===== POSTI RIMASTI (widget prenotazione) ===== */
+  .booking-posti {
+    font-size: 0.8rem;
+    color: var(--warm-gray);
+    margin: -0.2rem 0 0.8rem;
+    min-height: 1.1rem;
+  }
+  .booking-posti.pochi { color: var(--terra); font-weight: 600; }
+  .booking-posti.pieno { color: var(--terra); font-weight: 600; }
+  .booking-posti.ok { color: var(--moss); }
+  .booking-cta:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* ===== AREA GUIDA ===== */
+  .ag-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1.6rem;
+  }
+  .ag-stat {
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 14px;
+    padding: 0.9rem 0.8rem;
+  }
+  .ag-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .ag-stat-lab {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--warm-gray);
+    margin-top: 0.25rem;
+  }
+  .ag-titolo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm-gray);
+    margin: 1.4rem 0 0.7rem;
+  }
+  .ag-titolo:first-of-type { margin-top: 0; }
+  .ag-titolo button {
+    background: none; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    color: var(--terra);
+    text-transform: none; letter-spacing: 0;
+  }
+  .ag-giorno {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--charcoal);
+    margin: 0.9rem 0 0.45rem;
+  }
+  .ag-pren {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .ag-pren.passata { opacity: 0.6; }
+  .ag-ora {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1rem;
+    min-width: 3.2rem;
+  }
+  .ag-pren-info { flex: 1; min-width: 0; }
+  .ag-pren-titolo {
+    font-weight: 600; font-size: 0.88rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ag-pren-meta {
+    font-size: 0.78rem; color: var(--warm-gray);
+    display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; margin-top: 0.2rem;
+  }
+  .ag-pren-meta a { color: var(--terra); text-decoration: none; }
+  .ag-pren-lato { text-align: right; display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end; }
+  .ag-incasso { font-weight: 700; font-size: 0.9rem; }
+  .ag-esp {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--sand);
+    border-radius: 14px;
+    padding: 0.7rem;
+    margin-bottom: 0.5rem;
+  }
+  .ag-esp img {
+    width: 64px; height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--sand);
+  }
+  .ag-esp-info { flex: 1; min-width: 0; }
+  .ag-azioni { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+  .ag-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    border-radius: 100px;
+    border: 1px solid var(--sand);
+    background: var(--cream);
+    color: var(--charcoal);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ag-btn:hover { border-color: var(--terra); color: var(--terra); }
+  .ag-btn.danger { color: var(--terra); }
+  .ag-btn:disabled { opacity: 0.5; cursor: wait; }
+  .ag-nota { font-size: 0.8rem; color: var(--warm-gray); line-height: 1.5; }
+  .ag-annullata { font-size: 0.72rem; color: var(--warm-gray); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  @media (max-width: 640px) {
+    .ag-stats { grid-template-columns: repeat(2, 1fr); }
+    .ag-pren, .ag-esp { flex-wrap: wrap; }
+    .ag-pren-lato { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
+    .ag-azioni { width: 100%; justify-content: flex-start; }
+  }
 </style>
 </head>
 <body>
@@ -3451,7 +3586,7 @@
       </div>
       <a href="#" class="user-menu-item">🎫 Le mie prenotazioni</a>
       <a href="#" class="user-menu-item">❤️ Preferiti</a>
-      <a href="#" class="user-menu-item">👤 Profilo</a>
+      <a href="#" class="user-menu-item">🧭 Area guida</a>
       <a href="#" class="user-menu-item">🧭 Diventa guida</a>
       <div class="user-menu-divider"></div>
       <a href="#" class="user-menu-item danger" id="btnLogout">↩ Esci</a>
@@ -3842,13 +3977,14 @@
             <span class="booking-input-label">Partecipanti</span>
             <input class="booking-input" type="number" value="2" min="1" id="bookingGuests" oninput="updateBooking()">
           </div>
+          <div class="booking-posti" id="bookingPosti" aria-live="polite"></div>
           <div class="booking-breakdown">
             <div class="booking-line"><span id="bookingLineLabel"></span><span id="bookingLineTotal"></span></div>
             <div class="booking-line"><span>Commissione servizio</span><span id="bookingFee"></span></div>
             <div class="booking-line total"><span>Totale</span><span id="bookingGrandTotal"></span></div>
           </div>
           <button class="booking-cta" onclick="richiediLogin()">Prenota ora</button>
-          <p class="booking-note">Non ti verrà addebitato nulla ora · Cancellazione gratuita 48h prima</p>
+          <p class="booking-note">Nessun pagamento online per ora · puoi annullare dal tuo account</p>
         </div>
       </div>
     </div>
@@ -4144,6 +4280,7 @@
       <div class="panel-tabs">
         <button class="panel-tab active" id="tabPrenotazioni">Prenotazioni</button>
         <button class="panel-tab" id="tabPreferiti">Preferiti</button>
+        <button class="panel-tab" id="tabGuida">Area guida</button>
       </div>
     </div>
     <div class="panel-body" id="panelBody">
@@ -4160,7 +4297,7 @@
     <button class="modal-close" onclick="chiudiPubblica()">✕</button>
     <div class="auth-alert" id="pubAlert"></div>
     <h2 class="modal-title" id="pubTitolo">Pubblica un'esperienza</h2>
-    <p class="modal-sub">Racconta cosa sai fare e cosa conosci della tua città.</p>
+    <p class="modal-sub" id="pubSottotitolo">Racconta cosa sai fare e cosa conosci della tua città.</p>
 
     <div class="form-group">
       <label class="form-label">Titolo</label>
@@ -4243,7 +4380,7 @@
     </div>
 
     <button class="btn-full btn-full-primary" id="btnPubblica">Pubblica esperienza</button>
-    <p class="modal-switch">Potrai modificarla o rimuoverla dal tuo account.</p>
+    <p class="modal-switch" id="pubNota">Potrai modificarla o rimuoverla dall'Area guida, nel menu del tuo account.</p>
   </div>
 </div>
 
@@ -4549,8 +4686,11 @@
     const dataInput = document.getElementById('bookingDate');
     dataInput.min = oggiISO();
     if (RICERCA.data && RICERCA.data >= oggiISO()) dataInput.value = RICERCA.data;
+    else if (dataInput.value && dataInput.value < oggiISO()) dataInput.value = '';
 
+    window.postiLiberi = null;      // si ricalcola per data e orario scelti
     updateBooking();
+    if (window.aggiornaPosti) window.aggiornaPosti();
 
     const ov = document.getElementById('expDetailOverlay');
     ov.classList.add('active');
@@ -4583,13 +4723,21 @@
   document.getElementById('expDetailOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeExpDetail();
   });
+  // Cambiando data o orario cambiano i posti liberi
+  ['bookingDate', 'bookingTime'].forEach(id =>
+    document.getElementById(id).addEventListener('change', () => {
+      if (window.aggiornaPosti) window.aggiornaPosti();
+    }));
 
   // BOOKING CALCULATOR
   function updateBooking() {
     const e = CATALOGO[espCorrente];
     if (!e) return;
-    const max = e.maxPersone || parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    let max = e.maxPersone || parseInt((e.gruppo.match(/\d+/) || [8])[0]);
+    // Se conosciamo i posti liberi per data e orario, il limite è quello
+    if (typeof window.postiLiberi === 'number' && window.postiLiberi > 0) max = Math.min(max, window.postiLiberi);
     const input = document.getElementById('bookingGuests');
+    input.max = max;
     let guests = parseInt(input.value) || 1;
     if (guests > max) { guests = max; input.value = max; }
     if (guests < 1)   { guests = 1;   input.value = 1; }
@@ -4745,7 +4893,8 @@ import {
   orderBy,
   serverTimestamp,
   where,
-  limit
+  limit,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -4937,6 +5086,9 @@ onAuthStateChanged(auth, user => {
 
     caricaPreferiti(user.uid);
     if (window.renderTutte) window.renderTutte();
+    // Se il dettaglio è aperto, ricalcola posti e "è la tua esperienza"
+    if (document.getElementById('expDetailOverlay').classList.contains('active') && window.aggiornaPosti)
+      window.aggiornaPosti();
 
     // Svuota i campi del form
     ['loginEmail','loginPassword','signupName','signupEmail','signupPassword','resetEmail']
@@ -5027,8 +5179,73 @@ document.querySelectorAll('.exp-wishlist').forEach(btn => {
   });
 });
 
-/* ---------- PRENOTAZIONI ---------- */
+/* ============================================================
+   PRENOTAZIONI — collezione condivisa /prenotazioni
+   Ogni prenotazione la leggono solo il cliente e la guida.
+   I posti occupati per data+orario stanno in
+     /esperienze/{id}/slot/{AAAA-MM-GG_HHMM}  → { occupati, ultima }
+   e si aggiornano nella STESSA transazione della prenotazione:
+   così due persone non possono prendersi l'ultimo posto insieme.
+   ============================================================ */
 
+const refPrenGlobali = () => collection(db, 'prenotazioni');
+const slotId = (data, orario) => data + '_' + String(orario || '').replace(/[^0-9A-Za-z]/g, '');
+const refSlot = (espId, data, orario) => doc(db, 'esperienze', espId, 'slot', slotId(data, orario));
+const numeroSicuro = x => (Number.isFinite(Number(x)) ? Number(x) : 0);
+
+/* ---------- Posti liberi nel widget di prenotazione ---------- */
+let postiSeq = 0;
+window.aggiornaPosti = async function () {
+  const box  = document.getElementById('bookingPosti');
+  const btn  = document.querySelector('.booking-cta');
+  const e    = CATALOGO[espCorrente];
+  const data = document.getElementById('bookingDate').value;
+  const ora  = document.getElementById('bookingTime').value;
+  const seq  = ++postiSeq;
+  if (!e || !box) return;
+
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (uid && e.autoreUid === uid) {
+    box.className = 'booking-posti';
+    box.textContent = 'Questa esperienza è tua: le prenotazioni le vedi nell\'Area guida.';
+    btn.disabled = true; btn.textContent = 'È la tua esperienza';
+    return;
+  }
+  btn.disabled = false; btn.textContent = 'Prenota ora';
+
+  if (!data) {
+    window.postiLiberi = null;
+    box.className = 'booking-posti';
+    box.textContent = `Fino a ${e.maxPersone} persone per orario. Scegli una data per vedere i posti liberi.`;
+    return;
+  }
+  box.className = 'booking-posti';
+  box.textContent = 'Controllo i posti liberi…';
+  try {
+    const s = await getDoc(refSlot(espCorrente, data, ora));
+    if (seq !== postiSeq) return;
+    const liberi = Math.max(0, e.maxPersone - (s.exists() ? numeroSicuro(s.data().occupati) : 0));
+    window.postiLiberi = liberi;
+    if (liberi === 0) {
+      box.className = 'booking-posti pieno';
+      box.textContent = 'Esaurito per questo orario: prova un altro giorno o un altro orario.';
+      btn.disabled = true; btn.textContent = 'Esaurito';
+    } else {
+      box.className = 'booking-posti ' + (liberi <= 2 ? 'pochi' : 'ok');
+      box.textContent = liberi === 1 ? 'Resta 1 solo posto per questo orario'
+                                     : `Restano ${liberi} posti per questo orario`;
+    }
+    updateBooking();
+  } catch (err) {
+    if (seq !== postiSeq) return;
+    console.warn('Posti liberi:', err);
+    window.postiLiberi = null;
+    box.className = 'booking-posti';
+    box.textContent = '';
+  }
+};
+
+/* ---------- Prenota ---------- */
 window.richiediLogin = async () => {
   const user = auth.currentUser;
   if (!user) {
@@ -5038,163 +5255,354 @@ window.richiediLogin = async () => {
   }
 
   const e      = CATALOGO[espCorrente];
+  const espId  = espCorrente;
   const btn    = document.querySelector('.booking-cta');
   const data   = document.getElementById('bookingDate').value;
   const orario = document.getElementById('bookingTime').value;
   const nPers  = parseInt(document.getElementById('bookingGuests').value) || 1;
 
+  if (!e) return false;
+  if (e.autoreUid === user.uid) { toast('Non puoi prenotare la tua esperienza.'); return false; }
   if (!data) { toast('Scegli una data per continuare.'); return false; }
+  if (data < oggiISO()) { toast('La data scelta è già passata.'); return false; }
 
-  const oggi = new Date(); oggi.setHours(0,0,0,0);
-  if (new Date(data) < oggi) { toast('La data scelta è già passata.'); return false; }
-
-  const prezzo  = e.prezzo;
-  const imponib = prezzo * nPers;
-  const totale  = imponib + Math.round(imponib * 0.1);
-
-  const testoOriginale = btn.textContent;
+  const testoOriginale = 'Prenota ora';
   btn.disabled = true;
   btn.textContent = 'Conferma in corso...';
 
+  const prenRef = doc(refPrenGlobali());   // id generato qui, serve anche allo slot
+  const slotRef = refSlot(espId, data, orario);
+
   try {
-    await addDoc(refPrenotazioni(user.uid), {
-      espId:         espCorrente,
-      titolo:        e.titolo,
-      citta:         e.citta,
-      guida:         e.guida,
-      data, orario,
-      partecipanti:  nPers,
-      prezzoUnitario: prezzo,
-      totale,
-      stato:         'confermata',
-      creato:        serverTimestamp()
+    await runTransaction(db, async tx => {
+      // Si rileggono esperienza e posti DENTRO la transazione: dati freschi
+      const espSnap  = await tx.get(doc(db, 'esperienze', espId));
+      const slotSnap = await tx.get(slotRef);
+      if (!espSnap.exists()) throw { code: 'lg/sparita' };
+      const esp = espSnap.data();
+      const max = numeroSicuro(esp.maxPersone) || e.maxPersone;
+      const occupati = slotSnap.exists() ? numeroSicuro(slotSnap.data().occupati) : 0;
+      if (occupati + nPers > max) throw { code: 'lg/pieno', liberi: Math.max(0, max - occupati) };
+
+      const prezzo  = numeroSicuro(esp.prezzo);
+      const imponib = prezzo * nPers;
+      tx.set(prenRef, {
+        espId,
+        slot:          slotId(data, orario),
+        titolo:        String(esp.titolo || e.titolo),
+        citta:         String(esp.citta || e.citta),
+        guida:         String(esp.autoreNome || e.guida),
+        guidaUid:      esp.autoreUid,
+        clienteUid:    user.uid,
+        clienteNome:   user.displayName || user.email.split('@')[0],
+        clienteEmail:  user.email || '',
+        data, orario,
+        partecipanti:  nPers,
+        prezzoUnitario: prezzo,
+        totale:        imponib + Math.round(imponib * 0.1),
+        stato:         'confermata',
+        creato:        serverTimestamp()
+      });
+      tx.set(slotRef, { occupati: occupati + nPers, ultima: prenRef.id });
     });
+
     btn.textContent = '✓ Prenotato!';
     toast('Prenotazione confermata. La trovi nel tuo account.', true);
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = testoOriginale;
-      closeExpDetail();
-    }, 1600);
-  } catch (e) {
-    console.error(e);
+    setTimeout(() => { closeExpDetail(); btn.disabled = false; btn.textContent = testoOriginale; }, 1600);
+  } catch (err) {
+    if (!String(err.code).startsWith('lg/')) console.error(err);   // "pieno" è un caso previsto
     btn.disabled = false;
     btn.textContent = testoOriginale;
-    toast('Prenotazione non riuscita. Riprova.');
+    if (err.code === 'lg/pieno') {
+      toast(err.liberi ? `Sono rimasti solo ${err.liberi} posti per questo orario.`
+                       : 'Nel frattempo i posti sono finiti. Scegli un altro orario.');
+      window.aggiornaPosti();
+    } else if (err.code === 'lg/sparita') {
+      toast('Questa esperienza non è più disponibile.');
+    } else if (err.code === 'permission-denied') {
+      toast('Il database ha rifiutato la prenotazione: vanno aggiornate le regole Firestore.');
+    } else {
+      toast('Prenotazione non riuscita. Riprova.');
+    }
   }
   return true;
 };
 
-async function annullaPrenotazione(id) {
+/* ---------- Annulla (cliente o guida) ---------- */
+async function annullaPrenotazione(id, chi) {
   const user = auth.currentUser;
-  if (!user) return;
+  if (!user) return false;
+  const msg = chi === 'guida'
+    ? 'Annullare questa prenotazione? Avvisa tu il cliente: il sito per ora non invia email.'
+    : 'Annullare la prenotazione?';
+  if (!confirm(msg)) return false;
+
   try {
-    await updateDoc(doc(db, 'users', user.uid, 'prenotazioni', id), { stato: 'annullata' });
+    if (chi === 'vecchia') {
+      // Prenotazioni fatte prima di questa versione: stavano solo nell'account
+      await updateDoc(doc(db, 'users', user.uid, 'prenotazioni', id), { stato: 'annullata' });
+    } else {
+      const prenRef = doc(db, 'prenotazioni', id);
+      await runTransaction(db, async tx => {
+        const p = await tx.get(prenRef);
+        if (!p.exists()) throw { code: 'not-found' };
+        const d = p.data();
+        if (d.stato !== 'confermata') throw { code: 'lg/gia-annullata' };
+        const slotRef = doc(db, 'esperienze', d.espId, 'slot', d.slot);
+        const s = await tx.get(slotRef);
+        const occupati = s.exists() ? numeroSicuro(s.data().occupati) : 0;
+        tx.update(prenRef, {
+          stato: chi === 'guida' ? 'annullata_guida' : 'annullata',
+          annullataIl: serverTimestamp()
+        });
+        tx.set(slotRef, { occupati: Math.max(0, occupati - numeroSicuro(d.partecipanti)), ultima: id });
+      });
+    }
     toast('Prenotazione annullata');
-    caricaTab('prenotazioni');
+    return true;
   } catch (e) {
     console.error(e);
-    toast('Non riesco ad annullare. Riprova.');
+    toast(e.code === 'lg/gia-annullata' ? 'Era già annullata.' : 'Non riesco ad annullare. Riprova.');
+    return false;
   }
 }
-window.annullaPrenotazione = annullaPrenotazione;
 
 /* ---------- PANNELLO ACCOUNT ---------- */
 
 const fmtData = iso => {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const d = new Date(iso + 'T12:00');
   return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 };
-const esc = t => String(t ?? '').replace(/[<>&"]/g, c =>
-  ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;' }[c]));
+const fmtGiorno = iso => {
+  const d = new Date(iso + 'T12:00');
+  const oggi = oggiISO();
+  const domani = (() => { const x = new Date(); x.setDate(x.getDate() + 1);
+    return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); })();
+  const base = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  return iso === oggi ? 'Oggi · ' + base : iso === domani ? 'Domani · ' + base : base.charAt(0).toUpperCase() + base.slice(1);
+};
+const esc = esc2;
+const vuotoPannello = (icona, testo, extra) =>
+  `<div class="panel-empty"><div class="panel-empty-icon">${icona}</div>
+   <div class="panel-empty-text">${testo}</div>${extra || ''}</div>`;
+
+let tabCorrente = 'prenotazioni';
 
 window.caricaTab = async function (tab) {
+  tabCorrente = tab;
   const body = document.getElementById('panelBody');
   const user = auth.currentUser;
 
   document.getElementById('tabPrenotazioni').classList.toggle('active', tab === 'prenotazioni');
   document.getElementById('tabPreferiti').classList.toggle('active', tab === 'preferiti');
+  document.getElementById('tabGuida').classList.toggle('active', tab === 'guida');
 
-  if (!user) {
-    body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">🔒</div>' +
-      '<div class="panel-empty-text">Accedi per vedere i tuoi dati.</div></div>';
-    return;
-  }
-
+  if (!user) { body.innerHTML = vuotoPannello('🔒', 'Accedi per vedere i tuoi dati.'); return; }
   body.innerHTML = '<div class="panel-loading">Caricamento...</div>';
 
   try {
-    if (tab === 'prenotazioni') {
-      const snap = await getDocs(query(refPrenotazioni(user.uid), orderBy('creato', 'desc')));
-      if (snap.empty) {
-        body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">🎫</div>' +
-          '<div class="panel-empty-text">Non hai ancora prenotazioni.<br>Scegli un\'esperienza e inizia da lì.</div></div>';
-        return;
-      }
-      body.innerHTML = snap.docs.map(d => {
-        const b = d.data();
-        const annullata = b.stato === 'annullata';
-        return `
-          <div class="booking-item">
-            <div class="booking-item-info">
-              <div class="booking-item-title">${esc(b.titolo)}</div>
-              <div class="booking-item-meta">
-                <span>📍 ${esc(b.citta)}</span>
-                <span>📅 ${fmtData(b.data)}</span>
-                <span>🕐 ${esc(b.orario)}</span>
-                <span>👥 ${b.partecipanti}</span>
-              </div>
-            </div>
-            <div class="booking-item-actions">
-              <span class="booking-badge ${annullata ? 'cancelled' : ''}">${annullata ? 'Annullata' : 'Confermata'}</span>
-              <div class="booking-item-total">€${b.totale}</div>
-              ${annullata ? '' : `<button class="btn-cancel" onclick="annullaPrenotazione('${d.id}')">Annulla</button>`}
-            </div>
-          </div>`;
-      }).join('');
-
-    } else {
-      const snap = await getDocs(refPreferiti(user.uid));
-      if (snap.empty) {
-        body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">❤️</div>' +
-          '<div class="panel-empty-text">Nessun preferito salvato.<br>Tocca il cuore su un\'esperienza per tenerla da parte.</div></div>';
-        return;
-      }
-      body.innerHTML = snap.docs.map(d => {
-        const f = d.data();
-        return `
-          <div class="fav-item">
-            <div class="fav-item-info">
-              <div class="fav-item-title">${esc(f.titolo)}</div>
-              <div class="fav-item-city">📍 ${esc(f.citta)}</div>
-            </div>
-            <div class="fav-item-price">€${f.prezzo}</div>
-          </div>`;
-      }).join('');
-    }
+    if (tab === 'prenotazioni')   body.innerHTML = await htmlPrenotazioniCliente(user);
+    else if (tab === 'preferiti') body.innerHTML = await htmlPreferiti(user);
+    else                          body.innerHTML = await htmlAreaGuida(user);
   } catch (e) {
     console.error(e);
-    body.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">⚠️</div>' +
-      '<div class="panel-empty-text">Non riesco a caricare i dati.<br>Controlla la connessione e riprova.</div></div>';
+    body.innerHTML = vuotoPannello('⚠️',
+      'Non riesco a caricare i dati.<br>' + esc(spiegaDb(e)));
   }
 };
 
+/* --- Le mie prenotazioni (cliente) --- */
+async function htmlPrenotazioniCliente(user) {
+  const [nuove, vecchie] = await Promise.all([
+    getDocs(query(refPrenGlobali(), where('clienteUid', '==', user.uid))),
+    getDocs(refPrenotazioni(user.uid)).catch(() => ({ docs: [] }))
+  ]);
+  const voci = [
+    ...nuove.docs.map(d => ({ id: d.id, tipo: 'nuova', ...d.data() })),
+    ...vecchie.docs.map(d => ({ id: d.id, tipo: 'vecchia', ...d.data() }))
+  ];
+  if (!voci.length) return vuotoPannello('🎫',
+    'Non hai ancora prenotazioni.<br>Scegli un\'esperienza e inizia da lì.');
+
+  const oggi = oggiISO();
+  // Prima le prossime (dalla più vicina), poi le passate (dalla più recente)
+  voci.sort((a, b) => {
+    const fa = String(a.data) >= oggi, fb = String(b.data) >= oggi;
+    if (fa !== fb) return fa ? -1 : 1;
+    return fa ? String(a.data).localeCompare(String(b.data)) : String(b.data).localeCompare(String(a.data));
+  });
+
+  return voci.map(b => {
+    const annullata = String(b.stato).startsWith('annullata');
+    const passata = String(b.data) < oggi;
+    const etichetta = b.stato === 'annullata_guida' ? 'Annullata dalla guida'
+                    : annullata ? 'Annullata' : passata ? 'Svolta' : 'Confermata';
+    return `
+      <div class="booking-item">
+        <div class="booking-item-info">
+          <div class="booking-item-title">${esc(b.titolo)}</div>
+          <div class="booking-item-meta">
+            <span>📍 ${esc(b.citta)}</span>
+            <span>📅 ${esc(fmtData(b.data))}</span>
+            <span>🕐 ${esc(b.orario)}</span>
+            <span>👥 ${esc(b.partecipanti)}</span>
+            ${b.guida ? `<span>🧭 ${esc(b.guida)}</span>` : ''}
+          </div>
+        </div>
+        <div class="booking-item-actions">
+          <span class="booking-badge ${annullata || passata ? 'cancelled' : ''}">${etichetta}</span>
+          <div class="booking-item-total">€${esc(numeroSicuro(b.totale))}</div>
+          ${annullata || passata ? '' :
+            `<button class="btn-cancel" data-annulla="${esc(b.id)}" data-chi="${b.tipo === 'vecchia' ? 'vecchia' : 'cliente'}">Annulla</button>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* --- Preferiti --- */
+async function htmlPreferiti(user) {
+  const snap = await getDocs(refPreferiti(user.uid));
+  if (snap.empty) return vuotoPannello('❤️',
+    'Nessun preferito salvato.<br>Tocca il cuore su un\'esperienza per tenerla da parte.');
+  return snap.docs.map(d => {
+    const f = d.data();
+    const esiste = !!CATALOGO[d.id];
+    return `
+      <div class="fav-item" ${esiste ? `data-apri="${esc(d.id)}" style="cursor:pointer"` : ''}>
+        <div class="fav-item-info">
+          <div class="fav-item-title">${esc(f.titolo)}</div>
+          <div class="fav-item-city">📍 ${esc(f.citta)}${esiste ? '' : ' · non più disponibile'}</div>
+        </div>
+        <div class="fav-item-price">€${esc(numeroSicuro(f.prezzo))}</div>
+      </div>`;
+  }).join('');
+}
+
+/* --- Area guida --- */
+async function htmlAreaGuida(user) {
+  const mie = Object.entries(CATALOGO).filter(([, e]) => e.autoreUid === user.uid);
+  const snap = await getDocs(query(refPrenGlobali(), where('guidaUid', '==', user.uid)));
+  const pren = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (!mie.length && !pren.length) {
+    return vuotoPannello('🧭',
+      'Non hai ancora pubblicato esperienze.<br>Quando lo fai, qui trovi prenotazioni, posti e incassi.',
+      '<br><button class="btn-primary" style="border:none;cursor:pointer" data-azione="pubblica">Pubblica la prima esperienza</button>');
+  }
+
+  const oggi = oggiISO();
+  const attive = pren.filter(p => p.stato === 'confermata');
+  const prossime = attive.filter(p => String(p.data) >= oggi)
+    .sort((a, b) => (a.data + a.orario).localeCompare(b.data + b.orario));
+  const passate = pren.filter(p => String(p.data) < oggi || p.stato !== 'confermata')
+    .sort((a, b) => (b.data + b.orario).localeCompare(a.data + a.orario))
+    .slice(0, 8);
+  const persone = prossime.reduce((t, p) => t + numeroSicuro(p.partecipanti), 0);
+  const incasso = prossime.reduce((t, p) => t + numeroSicuro(p.prezzoUnitario) * numeroSicuro(p.partecipanti), 0);
+
+  const stat = (v, l) => `<div class="ag-stat"><div class="ag-stat-val">${v}</div><div class="ag-stat-lab">${l}</div></div>`;
+  let html = `<div class="ag-stats">
+    ${stat(mie.length, mie.length === 1 ? 'Esperienza' : 'Esperienze')}
+    ${stat(prossime.length, prossime.length === 1 ? 'Prenotazione in arrivo' : 'Prenotazioni in arrivo')}
+    ${stat(persone, persone === 1 ? 'Persona attesa' : 'Persone attese')}
+    ${stat('€' + incasso, 'Incasso previsto')}
+  </div>`;
+
+  const rigaPren = (p, attiva) => `
+    <div class="ag-pren${attiva ? '' : ' passata'}">
+      <div class="ag-ora">${esc(p.orario)}</div>
+      <div class="ag-pren-info">
+        <div class="ag-pren-titolo">${esc(p.titolo)}</div>
+        <div class="ag-pren-meta">
+          <span>👥 ${esc(p.partecipanti)} ${numeroSicuro(p.partecipanti) === 1 ? 'persona' : 'persone'}</span>
+          <span>👤 ${esc(p.clienteNome || 'Cliente')}</span>
+          ${p.clienteEmail ? `<a href="mailto:${esc(p.clienteEmail)}">✉ ${esc(p.clienteEmail)}</a>` : ''}
+          ${attiva ? '' : `<span>📅 ${esc(fmtData(p.data))}</span>`}
+        </div>
+      </div>
+      <div class="ag-pren-lato">
+        <div class="ag-incasso">€${numeroSicuro(p.prezzoUnitario) * numeroSicuro(p.partecipanti)}</div>
+        ${attiva
+          ? `<button class="ag-btn danger" data-annulla="${esc(p.id)}" data-chi="guida">Annulla</button>`
+          : `<span class="ag-annullata">${p.stato === 'confermata' ? 'Svolta'
+               : p.stato === 'annullata_guida' ? 'Annullata da te' : 'Annullata dal cliente'}</span>`}
+      </div>
+    </div>`;
+
+  html += `<div class="ag-titolo">Prossime prenotazioni</div>`;
+  if (!prossime.length) {
+    html += `<p class="ag-nota">Nessuna prenotazione in arrivo. Quando qualcuno prenota la trovi qui, con il suo contatto.</p>`;
+  } else {
+    let giorno = '';
+    prossime.forEach(p => {
+      if (p.data !== giorno) { giorno = p.data; html += `<div class="ag-giorno">${esc(fmtGiorno(p.data))}</div>`; }
+      html += rigaPren(p, true);
+    });
+  }
+
+  html += `<div class="ag-titolo">Le tue esperienze <button data-azione="pubblica">+ Nuova</button></div>`;
+  html += mie.map(([id, e]) => {
+    const n = prossime.filter(p => p.espId === id).reduce((t, p) => t + numeroSicuro(p.partecipanti), 0);
+    return `
+      <div class="ag-esp">
+        <img src="${esc(e.img[0])}" alt="">
+        <div class="ag-esp-info">
+          <div class="ag-pren-titolo">${esc(e.titolo)}</div>
+          <div class="ag-pren-meta">
+            <span>📍 ${esc(e.citta)}</span><span>€${esc(e.prezzo)} / pers.</span>
+            <span>👥 max ${esc(e.maxPersone)}</span>
+            <span>${n ? `🎫 ${n} ${n === 1 ? 'persona prenotata' : 'persone prenotate'}` : 'Nessuna prenotazione in arrivo'}</span>
+          </div>
+        </div>
+        <div class="ag-azioni">
+          <button class="ag-btn" data-apri="${esc(id)}">Vedi</button>
+          <button class="ag-btn" data-modifica="${esc(id)}">Modifica</button>
+          <button class="ag-btn danger" data-elimina="${esc(id)}">Elimina</button>
+        </div>
+      </div>`;
+  }).join('') || `<p class="ag-nota">Nessuna esperienza pubblicata al momento.</p>`;
+
+  if (passate.length) {
+    html += `<div class="ag-titolo">Passate e annullate</div>`;
+    html += passate.map(p => rigaPren(p, false)).join('');
+  }
+  return html;
+}
+
 document.getElementById('tabPrenotazioni').onclick = () => caricaTab('prenotazioni');
 document.getElementById('tabPreferiti').onclick    = () => caricaTab('preferiti');
+document.getElementById('tabGuida').onclick        = () => caricaTab('guida');
+
+// Azioni dentro il pannello (delegate: il contenuto viene ridisegnato)
+document.getElementById('panelBody').addEventListener('click', async ev => {
+  const t = ev.target.closest('[data-annulla],[data-apri],[data-modifica],[data-azione]');
+  if (!t || t.hasAttribute('data-elimina')) return;   // "Elimina" lo gestisce il click globale
+  ev.preventDefault();
+  if (t.dataset.annulla) {
+    t.disabled = true;
+    const ok = await annullaPrenotazione(t.dataset.annulla, t.dataset.chi);
+    if (ok) caricaTab(tabCorrente); else t.disabled = false;
+  } else if (t.dataset.apri) {
+    closePanel();                     // il dettaglio sta sotto il pannello
+    openExpDetail(t.dataset.apri);
+  } else if (t.dataset.modifica) {
+    apriPubblica(t.dataset.modifica);
+  } else if (t.dataset.azione === 'pubblica') {
+    apriPubblica();
+  }
+});
 
 /* ---------- Voci del menu utente ---------- */
 const vociMenu = document.querySelectorAll('#userMenu .user-menu-item');
-vociMenu[0].addEventListener('click', e => {   // Le mie prenotazioni
+const voceMenu = (i, tab) => vociMenu[i] && vociMenu[i].addEventListener('click', e => {
   e.preventDefault();
   document.getElementById('userMenu').classList.remove('open');
-  openPanel('prenotazioni');
+  openPanel(tab);
 });
-vociMenu[1].addEventListener('click', e => {   // Preferiti
-  e.preventDefault();
-  document.getElementById('userMenu').classList.remove('open');
-  openPanel('preferiti');
-});
+voceMenu(0, 'prenotazioni');
+voceMenu(1, 'preferiti');
+voceMenu(2, 'guida');
 
 /* ============================================================
    ESPERIENZE — collezione pubblica /esperienze
@@ -5368,6 +5776,7 @@ function cardTrending(id, e, mia, distanza) {
         </div>
       </div>
       ${mia ? `<div class="card-azioni">
+        <button class="card-azione" data-modifica="${id}">Modifica</button>
         <button class="card-azione danger" data-elimina="${id}">Elimina</button>
       </div>` : ''}
     </div>`;
@@ -5795,6 +6204,8 @@ function renderTutto() {
 
 /* ---------- Click delegati sulle card generate ---------- */
 document.addEventListener('click', e => {
+  const modifica = e.target.closest('.card-azioni [data-modifica]');
+  if (modifica) { e.stopPropagation(); apriPubblica(modifica.dataset.modifica); return; }
   const elimina = e.target.closest('[data-elimina]');
   if (elimina) {
     e.stopPropagation();
@@ -5809,19 +6220,83 @@ document.addEventListener('click', e => {
 });
 
 /* ---------- Pubblicazione ---------- */
-window.apriPubblica = () => {
+let espInModifica = null;     // id dell'esperienza aperta in modifica, altrimenti null
+
+function svuotaModulo() {
+  ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pCategoria').selectedIndex = 0;
+  fotoScelte = [];
+  disegnaFoto();
+  document.getElementById('pConta').textContent = '0';
+  esitoCitta.textContent = '';
+  esitoGeo = null;
+  chiudiProposte();
+}
+
+function impostaModalita(id) {
+  espInModifica = id || null;
+  document.getElementById('pubTitolo').textContent = id ? 'Modifica esperienza' : 'Pubblica un\'esperienza';
+  document.getElementById('pubSottotitolo').textContent = id
+    ? 'Le prenotazioni già fatte restano valide. Se riduci i posti, vale per le prossime.'
+    : 'Racconta cosa sai fare e cosa conosci della tua città.';
+  document.getElementById('btnPubblica').textContent = id ? 'Salva modifiche' : 'Pubblica esperienza';
+  document.getElementById('pubNota').style.display = id ? 'none' : '';
+}
+
+window.apriPubblica = async (id) => {
   if (!auth.currentUser) {
     openModal('signup');
     showAuthAlert('Registrati per pubblicare la tua esperienza.');
     return;
   }
+  const e = id ? CATALOGO[id] : null;
+  if (id && (!e || e.autoreUid !== auth.currentUser.uid)) { toast('Puoi modificare solo le tue esperienze.'); return; }
+
+  // Si passa da modifica a nuova (o tra due modifiche): il modulo riparte pulito
+  if ((id || null) !== espInModifica || id) svuotaModulo();
+  impostaModalita(id);
+
+  if (e) {
+    const metti = (campo, v) => { document.getElementById(campo).value = v ?? ''; };
+    metti('pTitolo', e.titolo);
+    metti('pCitta', e.citta);
+    metti('pCategoria', e.categoria);
+    metti('pPrezzo', e.prezzo);
+    metti('pDurata', e.durata);
+    metti('pMax', e.maxPersone);
+    metti('pLingue', e.lingue);
+    metti('pOrari', e.orari.join(', '));
+    metti('pDescrizione', e.desc);
+    metti('pIncluso', e.incluso.join(', '));
+    document.getElementById('pConta').textContent = e.desc.length;
+    if (e.lat != null) {
+      esitoGeo = { lat: e.lat, lng: e.lng, nome: e.luogoCompleto || e.citta };
+      esitoCitta.textContent = '📍 ' + esitoGeo.nome;
+      esitoCitta.style.color = 'var(--moss)';
+    }
+    // Foto attuali: copertina + eventuali extra (lette solo ora)
+    if (e.img[0] && e.img[0] !== FOTO_NEUTRA) {
+      if (e.fotoExtra > 0 && !e.imgTutte && window.caricaGalleria) await window.caricaGalleria(id);
+      const tutte = (e.imgTutte || [e.img[0]]).filter(src => src && src !== FOTO_NEUTRA);
+      fotoScelte = tutte.slice(0, MAX_FOTO).map(src => ({ id: ++fotoSeq, stato: 'pronta', piccola: src, grande: src }));
+      disegnaFoto();
+    }
+  }
+
   document.getElementById('pubAlert').className = 'auth-alert';
-  document.getElementById('pubblicaOverlay').classList.add('active');
+  const ov = document.getElementById('pubblicaOverlay');
+  ov.classList.add('active');
+  ov.querySelector('.modal').scrollTop = 0;
   document.body.style.overflow = 'hidden';
 };
 window.chiudiPubblica = () => {
   document.getElementById('pubblicaOverlay').classList.remove('active');
-  document.body.style.overflow = '';
+  // In modifica non ha senso ritrovare i dati alla prossima apertura
+  if (espInModifica) { svuotaModulo(); impostaModalita(null); }
+  const altroAperto = ['panelOverlay', 'expDetailOverlay']
+    .some(id => document.getElementById(id).classList.contains('active'));
+  if (!altroAperto) document.body.style.overflow = '';
 };
 document.getElementById('pubblicaOverlay').addEventListener('click', function (e) {
   if (e.target === this) chiudiPubblica();
@@ -5971,90 +6446,120 @@ function avvisoPub(msg, ok) {
 document.getElementById('btnPubblica').addEventListener('click', async () => {
   const user = auth.currentUser;
   if (!user) return apriPubblica();
+  const inModifica = espInModifica;
+  const vecchia = inModifica ? CATALOGO[inModifica] : null;
 
   const val = id => document.getElementById(id).value.trim();
   const titolo = val('pTitolo'), citta = val('pCitta'), descrizione = val('pDescrizione');
   const prezzo = parseInt(val('pPrezzo')), maxPersone = parseInt(val('pMax'));
   const durata = val('pDurata'), lingue = val('pLingue') || 'IT';
 
+  // Gli stessi limiti delle regole Firestore: meglio un messaggio chiaro qui
+  // che un "permesso negato" dopo
   if (titolo.length < 8)      return avvisoPub('Il titolo è troppo corto: descrivi cosa farete.');
   if (!citta)                 return avvisoPub('Indica la città.');
-  if (!prezzo || prezzo < 1)  return avvisoPub('Inserisci un prezzo valido.');
+  if (!prezzo || prezzo < 1 || prezzo > 2000) return avvisoPub('Inserisci un prezzo tra 1 e 2000 €.');
   if (fotoScelte.some(v => v.stato !== 'pronta'))
     return avvisoPub('Aspetta un attimo: sto ancora preparando le foto.');
-  if (!maxPersone || maxPersone < 1) return avvisoPub('Indica quante persone puoi accogliere.');
+  if (!maxPersone || maxPersone < 1 || maxPersone > 50) return avvisoPub('Indica quante persone puoi accogliere (da 1 a 50).');
   if (!durata)                return avvisoPub('Indica la durata.');
   if (descrizione.length < 40) return avvisoPub('La descrizione è troppo breve. Racconta qualcosa in più.');
 
   const btn = document.getElementById('btnPubblica');
   setLoading(btn, true, 'Cerco il luogo...');
 
-  // Risolvi le coordinate una volta sola, qui: la mappa poi le legge dal documento
-  // Se l'utente ha scelto dalla lista usiamo quelle coordinate,
-  // altrimenti risolviamo il testo digitato.
+  // Coordinate: in modifica, se la città non è cambiata, si tengono quelle salvate
   let geo = esitoGeo;
+  if (!geo && vecchia && normalizza(vecchia.citta) === normalizza(citta) && vecchia.lat != null) {
+    geo = { lat: vecchia.lat, lng: vecchia.lng, nome: vecchia.luogoCompleto || citta };
+  }
   if (!geo) geo = await geocodifica(citta);
 
   setLoading(btn, false);
-  setLoading(btn, true, 'Pubblicazione...');
+  setLoading(btn, true, inModifica ? 'Salvo le modifiche...' : 'Pubblicazione...');
   const copertina = fotoScelte[0] ? fotoScelte[0].piccola : '';
   const extra = fotoScelte.slice(1).map(v => v.grande);
+  const campi = {
+    lat: geo ? geo.lat : null,
+    lng: geo ? geo.lng : null,
+    luogoCompleto: geo ? geo.nome : citta,
+    titolo, citta, descrizione, prezzo, maxPersone, durata, lingue,
+    categoria: document.getElementById('pCategoria').value,
+    orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean).slice(0, 8),
+    incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean).slice(0, 12),
+    foto: copertina,
+    fotoExtra: extra.length
+  };
+
   let fotoNonSalvate = false;
   try {
-    const nuova = await addDoc(refEsperienze(), {
-      lat: geo ? geo.lat : null,
-      lng: geo ? geo.lng : null,
-      luogoCompleto: geo ? geo.nome : citta,
-      titolo, citta, descrizione, prezzo, maxPersone, durata, lingue,
-      categoria: val('pCategoria') || document.getElementById('pCategoria').value,
-      orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean),
-      incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean),
-      foto: copertina,
-      fotoExtra: extra.length,
-      autoreUid: user.uid,
-      autoreNome: user.displayName || user.email.split('@')[0],
-      autoreFoto: user.photoURL || '',
-      creato: serverTimestamp()
-    });
+    let rif;
+    if (inModifica) {
+      rif = doc(db, 'esperienze', inModifica);
+      await updateDoc(rif, { ...campi, modificato: serverTimestamp() });
+    } else {
+      rif = await addDoc(refEsperienze(), {
+        ...campi,
+        autoreUid: user.uid,
+        autoreNome: user.displayName || user.email.split('@')[0],
+        autoreFoto: user.photoURL || '',
+        creato: serverTimestamp()
+      });
+    }
 
     // Le altre foto, una per documento (ognuna può pesare fino a ~250 KB)
-    if (extra.length) {
+    if (extra.length || inModifica) {
       setLoading(btn, false);
       setLoading(btn, true, 'Carico le foto...');
       try {
         for (let i = 0; i < extra.length; i++) {
-          await setDoc(doc(db, 'esperienze', nuova.id, 'foto', 'f' + (i + 1)),
+          await setDoc(doc(db, 'esperienze', rif.id, 'foto', 'f' + (i + 1)),
             { src: extra[i], ordine: i + 1, creato: serverTimestamp() });
+        }
+        // In modifica: via le foto che non ci sono più
+        for (let i = extra.length + 1; i < MAX_FOTO; i++) {
+          if (inModifica) await deleteDoc(doc(db, 'esperienze', rif.id, 'foto', 'f' + i)).catch(() => {});
         }
       } catch (e) {
         console.error('Foto extra:', e);
         fotoNonSalvate = true;
-        try { await updateDoc(nuova, { fotoExtra: 0 }); } catch {}
+        try { await updateDoc(rif, { fotoExtra: 0 }); } catch {}
       }
     }
 
     avvisoPub(fotoNonSalvate
-      ? 'Esperienza pubblicata con la sola copertina: le altre foto sono state bloccate dalle regole di Firestore.'
-      : 'Esperienza pubblicata.', !fotoNonSalvate);
-    ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso']
-      .forEach(id => document.getElementById(id).value = '');
-    fotoScelte = [];
-    disegnaFoto();
-    document.getElementById('pConta').textContent = '0';
-    esitoCitta.textContent = '';
-    esitoGeo = null;
-    chiudiProposte();
+      ? 'Salvata con la sola copertina: le altre foto sono state bloccate dalle regole di Firestore.'
+      : inModifica ? 'Modifiche salvate.' : 'Esperienza pubblicata.', !fotoNonSalvate);
+    svuotaModulo();
     await caricaEsperienze();
-    setTimeout(() => { chiudiPubblica(); toast('La tua esperienza è online', true); }, fotoNonSalvate ? 3500 : 1200);
+    if (document.getElementById('panelOverlay').classList.contains('active')) caricaTab(tabCorrente);
+    setTimeout(() => {
+      chiudiPubblica();
+      toast(inModifica ? 'Esperienza aggiornata' : 'La tua esperienza è online', true);
+    }, fotoNonSalvate ? 3500 : 1200);
   } catch (e) {
     console.error(e);
-    avvisoPub('Pubblicazione non riuscita. ' + spiegaDb(e));
+    avvisoPub((inModifica ? 'Modifica non riuscita. ' : 'Pubblicazione non riuscita. ') + spiegaDb(e));
   } finally {
     setLoading(btn, false);
   }
 });
 
 async function eliminaEsperienza(id) {
+  const user = auth.currentUser;
+  // Non si cancella un'esperienza con persone già prenotate: prima si annullano
+  if (user) {
+    try {
+      const snap = await getDocs(query(refPrenGlobali(), where('guidaUid', '==', user.uid)));
+      const attese = snap.docs.map(d => d.data())
+        .filter(p => p.espId === id && p.stato === 'confermata' && String(p.data) >= oggiISO());
+      if (attese.length) {
+        const n = attese.reduce((t, p) => t + numeroSicuro(p.partecipanti), 0);
+        alert(`Questa esperienza ha ${attese.length} ${attese.length === 1 ? 'prenotazione' : 'prenotazioni'} in arrivo (${n} ${n === 1 ? 'persona' : 'persone'}).\n\nAnnullale dall'Area guida e avvisa i clienti, poi potrai eliminarla.`);
+        return;
+      }
+    } catch (e) { console.warn('Controllo prenotazioni:', e); }
+  }
   if (!confirm('Rimuovere questa esperienza? L\'operazione non si annulla.')) return;
   try {
     // Prima le foto extra (le regole controllano l'autore sul documento principale)
@@ -6065,9 +6570,10 @@ async function eliminaEsperienza(id) {
     await deleteDoc(doc(db, 'esperienze', id));
     toast('Esperienza rimossa');
     await caricaEsperienze();
+    if (document.getElementById('panelOverlay').classList.contains('active')) caricaTab(tabCorrente);
   } catch (e) {
     console.error(e);
-    toast('Non riesco a rimuoverla. Riprova.');
+    toast('Non riesco a rimuoverla. ' + spiegaDb(e));
   }
 }
 
