@@ -3282,11 +3282,125 @@
     font-style: italic;
   }
 
+  /* ===== CARICAMENTO FOTO ===== */
+  .form-label-nota {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--warm-gray);
+    margin-left: 0.3rem;
+  }
+  .foto-zona {
+    border: 1.5px dashed var(--sand);
+    border-radius: 14px;
+    padding: 0.7rem;
+    background: white;
+    transition: border-color .2s, background .2s;
+  }
+  .foto-zona.sopra { border-color: var(--terra); background: rgba(196,96,42,0.05); }
+  .foto-griglia {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  .foto-tile {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--cream);
+  }
+  .foto-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto-tile.caricamento::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 22px; height: 22px;
+    border: 2px solid var(--sand);
+    border-top-color: var(--terra);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  .foto-badge {
+    position: absolute;
+    left: 0.4rem; bottom: 0.4rem;
+    background: var(--terra);
+    color: white;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 100px;
+  }
+  .foto-azione {
+    position: absolute;
+    top: 0.35rem;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.92);
+    color: var(--charcoal);
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .foto-azione.togli { right: 0.35rem; }
+  .foto-azione.copertina { right: 2.1rem; font-size: 0.8rem; }
+  .foto-azione:hover { background: var(--terra); color: white; }
+  .foto-aggiungi {
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    border: 1.5px dashed var(--sand);
+    background: var(--cream);
+    color: var(--warm-gray);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    transition: border-color .2s, color .2s;
+  }
+  .foto-aggiungi span { font-size: 1.4rem; line-height: 1; }
+  .foto-aggiungi:hover { border-color: var(--terra); color: var(--terra); }
+
+  /* Galleria del dettaglio: si adatta al numero di foto invece di ripetere la stessa */
+  .exp-detail-gallery.n1 { grid-template-columns: 1fr; grid-template-rows: 394px; }
+  .exp-detail-gallery.n1 > div:not(.gal-main) { display: none; }
+  .exp-detail-gallery.n1 .gal-main { grid-row: auto; }
+  .exp-detail-gallery.n2 { grid-template-columns: 2fr 1fr; grid-template-rows: 394px; }
+  .exp-detail-gallery.n2 .gal-main { grid-row: auto; }
+  .exp-detail-gallery.n2 > div:nth-child(3) { display: none; }
+
   /* Recensioni: stato vuoto onesto */
   .reviews-vuote {
     font-size: 0.88rem;
     color: var(--warm-gray);
     line-height: 1.6;
+  }
+
+  @media (max-width: 900px) {
+    /* Su telefono le foto scorrono di lato invece di sparire */
+    .exp-detail-gallery.n2, .exp-detail-gallery.n3 {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      height: 260px;
+    }
+    .exp-detail-gallery.n2 > div, .exp-detail-gallery.n3 > div {
+      display: block !important;
+      flex: 0 0 88%;
+      scroll-snap-align: start;
+    }
+    .exp-detail-gallery.n2 > div:nth-child(3) { display: none !important; }
+    .exp-detail-gallery.n1 { grid-template-rows: 260px; height: 260px; }
   }
 
   @media (max-width: 640px) {
@@ -4120,10 +4234,12 @@
     </div>
 
     <div class="form-group">
-      <label class="form-label">Foto (indirizzo immagine)</label>
-      <input type="url" class="form-input" id="pFoto"
-             placeholder="https://images.unsplash.com/...">
-      <div class="form-hint">Incolla il link di una foto. Se lo lasci vuoto ne mettiamo una neutra.</div>
+      <label class="form-label">Foto <span class="form-label-nota">fino a 3 · la prima è la copertina</span></label>
+      <div class="foto-zona" id="fotoZona">
+        <div class="foto-griglia" id="fotoGriglia"></div>
+        <input type="file" id="pFotoFile" accept="image/*" multiple hidden>
+      </div>
+      <div class="form-hint" id="fotoHint">Scegli dal telefono o dal computer, oppure trascinale qui. Le riduciamo noi, non serve ritagliarle.</div>
     </div>
 
     <button class="btn-full btn-full-primary" id="btnPubblica">Pubblica esperienza</button>
@@ -4371,10 +4487,9 @@
 
     const set = (el, val) => { const n = document.getElementById(el); if (n) n.textContent = val; };
 
-    e.img.forEach((src, i) => {
-      const n = document.getElementById('dImg' + i);
-      if (n) { n.src = src; n.alt = e.titolo; }
-    });
+    // Subito la copertina; le altre foto arrivano dal database se ci sono
+    mostraGalleria(e.imgTutte || e.img, e.titolo);
+    if (!e.imgTutte && e.fotoExtra > 0 && window.caricaGalleria) window.caricaGalleria(id);
 
     set('dLuogo', '📍 ' + e.luogo);
     set('dTitolo', e.titolo);
@@ -4390,6 +4505,7 @@
 
     document.getElementById('dIncluso').innerHTML =
       e.incluso.map(v => '<li>' + esc2(v) + '</li>').join('');
+    document.querySelector('.exp-detail-includes').style.display = e.incluso.length ? '' : 'none';
 
     const gf = document.getElementById('dGuidaFoto');
     gf.src = e.guidaFoto; gf.alt = e.guida;
@@ -4445,6 +4561,21 @@
     requestAnimationFrame(() => { ov.scrollTop = 0; });
     document.body.style.overflow = 'hidden';
   }
+  // Una, due o tre foto: la galleria cambia forma invece di ripetere la stessa immagine
+  function mostraGalleria(srcs, alt) {
+    const lista = (srcs || []).filter(Boolean).slice(0, 3);
+    const n = Math.max(1, lista.length);
+    const gal = document.querySelector('.exp-detail-gallery');
+    gal.classList.remove('n1', 'n2', 'n3');
+    gal.classList.add('n' + n);
+    [0, 1, 2].forEach(i => {
+      const img = document.getElementById('dImg' + i);
+      if (!img) return;
+      img.src = lista[i] || lista[0] || FOTO_NEUTRA;
+      img.alt = alt || '';
+    });
+  }
+
   function closeExpDetail() {
     document.getElementById('expDetailOverlay').classList.remove('active');
     document.body.style.overflow = '';
@@ -5101,7 +5232,8 @@ async function caricaEsperienze() {
         return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : null;
       };
       const lista = (x, max) => Array.isArray(x) ? x.slice(0, max).map(s => testo(s, 60)) : [];
-      const foto = urlSicura(v.foto) || FOTO_NEUTRA;
+      // Copertina: link https (esperienze vecchie) o foto caricata e compressa (data:image)
+      const foto = urlSicura(v.foto, true) || FOTO_NEUTRA;
       const maxPersone = numero(v.maxPersone, 1, 50) || 8;
       const citta = testo(v.citta, 60) || 'Luogo non indicato';
 
@@ -5124,7 +5256,8 @@ async function caricaEsperienze() {
         guidaFoto: urlSicura(v.autoreFoto, true) || avatarIniziali(testo(v.autoreNome, 60), ''),
         autoreUid: testo(v.autoreUid, 128),
         lat: numero(v.lat, -90, 90), lng: numero(v.lng, -180, 180),
-        img: [foto, foto, foto],
+        img: [foto],
+        fotoExtra: numero(v.fotoExtra, 0, 2) || 0,
         orari: lista(v.orari, 8).length ? lista(v.orari, 8) : ['10:00'],
         desc: testo(v.descrizione, 1200),      // testo grezzo: si neutralizza quando si mostra
         incluso: lista(v.incluso, 12),
@@ -5698,6 +5831,132 @@ document.getElementById('pubblicaOverlay').addEventListener('click', function (e
   if (el) el.onclick = ev => { ev.preventDefault(); apriPubblica(); };
 });
 
+/* ============================================================
+   FOTO — si caricano dal dispositivo, si riducono nel browser e si
+   salvano su Firestore (nessun servizio in più da configurare):
+     esperienze/{id}.foto            → copertina (~1000 px, ≤ 110 KB)
+     esperienze/{id}/foto/{f1,f2}    → altre foto (~1600 px, ≤ 250 KB)
+   Le foto extra si leggono solo quando si apre il dettaglio.
+   ============================================================ */
+const MAX_FOTO = 3;
+let fotoScelte = [];          // [{ id, stato: 'caricamento'|'pronta', piccola, grande }]
+let fotoSeq = 0;
+
+function leggiImmagine(file) {
+  return new Promise((ok, ko) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('formato')); };
+    img.src = url;
+  });
+}
+
+// Ridimensiona e comprime in JPEG finché sta sotto maxByte
+function comprimi(img, lato, maxByte) {
+  let scala = Math.min(1, lato / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  for (let tentativo = 0; tentativo < 4; tentativo++) {
+    canvas.width = Math.round(img.naturalWidth * scala);
+    canvas.height = Math.round(img.naturalHeight * scala);
+    ctx.fillStyle = '#fff';                       // i PNG trasparenti non diventano neri
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    for (let q = 0.82; q >= 0.5; q -= 0.08) {
+      const url = canvas.toDataURL('image/jpeg', q);
+      if (url.length * 0.75 <= maxByte) return url;
+    }
+    scala *= 0.8;                                 // ancora troppo pesante: più piccola
+  }
+  return canvas.toDataURL('image/jpeg', 0.5);
+}
+
+async function aggiungiFoto(files) {
+  const immagini = [...files].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
+  const posto = MAX_FOTO - fotoScelte.length;
+  if (!immagini.length) return;
+  if (posto <= 0) return avvisoPub(`Puoi caricare al massimo ${MAX_FOTO} foto.`);
+  if (immagini.length > posto) avvisoPub(`Aggiunte le prime ${posto}: il massimo è ${MAX_FOTO} foto.`);
+
+  for (const file of immagini.slice(0, posto)) {
+    const voce = { id: ++fotoSeq, stato: 'caricamento' };
+    fotoScelte.push(voce);
+    disegnaFoto();
+    try {
+      const img = await leggiImmagine(file);
+      voce.piccola = comprimi(img, 1000, 110 * 1024);
+      voce.grande  = comprimi(img, 1600, 250 * 1024);
+      voce.stato = 'pronta';
+    } catch {
+      fotoScelte = fotoScelte.filter(v => v !== voce);
+      avvisoPub(/\.(heic|heif)$/i.test(file.name)
+        ? 'Questo browser non legge le foto HEIC dell\'iPhone. Caricala dal telefono o esportala in JPG.'
+        : 'Non riesco a leggere "' + file.name + '". Prova con una foto JPG o PNG.');
+    }
+    disegnaFoto();
+  }
+}
+
+function disegnaFoto() {
+  const griglia = document.getElementById('fotoGriglia');
+  griglia.innerHTML = fotoScelte.map((v, i) => `
+    <div class="foto-tile ${v.stato === 'caricamento' ? 'caricamento' : ''}" data-foto="${v.id}">
+      ${v.piccola ? `<img src="${v.piccola}" alt="Foto ${i + 1}">` : ''}
+      ${i === 0 && v.stato === 'pronta' ? '<span class="foto-badge">Copertina</span>' : ''}
+      ${i > 0 && v.stato === 'pronta' ? '<button type="button" class="foto-azione copertina" data-copertina title="Usa come copertina" aria-label="Usa come copertina">★</button>' : ''}
+      <button type="button" class="foto-azione togli" data-togli-foto title="Togli" aria-label="Togli foto">✕</button>
+    </div>`).join('') +
+    (fotoScelte.length < MAX_FOTO
+      ? `<button type="button" class="foto-aggiungi" id="fotoAggiungi"><span>+</span>${fotoScelte.length ? 'Aggiungi' : 'Scegli foto'}</button>`
+      : '');
+  document.getElementById('fotoHint').textContent = fotoScelte.length
+    ? 'Tocca ★ per scegliere la copertina. Senza foto ne mettiamo una neutra.'
+    : 'Scegli dal telefono o dal computer, oppure trascinale qui. Le riduciamo noi, non serve ritagliarle.';
+}
+
+const inputFoto = document.getElementById('pFotoFile');
+const zonaFoto  = document.getElementById('fotoZona');
+inputFoto.addEventListener('change', () => { aggiungiFoto(inputFoto.files); inputFoto.value = ''; });
+
+zonaFoto.addEventListener('click', e => {
+  if (e.target.closest('#fotoAggiungi')) { inputFoto.click(); return; }
+  const tile = e.target.closest('.foto-tile');
+  if (!tile) return;
+  const i = fotoScelte.findIndex(v => v.id === +tile.dataset.foto);
+  if (i < 0) return;
+  if (e.target.closest('[data-togli-foto]')) fotoScelte.splice(i, 1);
+  else if (e.target.closest('[data-copertina]')) fotoScelte.unshift(fotoScelte.splice(i, 1)[0]);
+  disegnaFoto();
+});
+
+// Trascina e rilascia (computer)
+['dragenter', 'dragover'].forEach(ev => zonaFoto.addEventListener(ev, e => {
+  e.preventDefault(); zonaFoto.classList.add('sopra');
+}));
+['dragleave', 'drop'].forEach(ev => zonaFoto.addEventListener(ev, e => {
+  e.preventDefault(); zonaFoto.classList.remove('sopra');
+}));
+zonaFoto.addEventListener('drop', e => aggiungiFoto(e.dataTransfer.files));
+disegnaFoto();
+
+/* Foto extra: lette solo quando si apre il dettaglio */
+window.caricaGalleria = async id => {
+  const e = CATALOGO[id];
+  if (!e) return;
+  try {
+    const snap = await getDocs(collection(db, 'esperienze', id, 'foto'));
+    const extra = snap.docs.map(d => d.data())
+      .sort((a, b) => (a.ordine || 0) - (b.ordine || 0))
+      .map(d => urlSicura(d.src, true))
+      .filter(Boolean);
+    e.imgTutte = [e.img[0], ...extra];
+    if (espCorrente === id) mostraGalleria(e.imgTutte, e.titolo);
+  } catch (err) {
+    console.warn('Foto extra non disponibili:', err);
+  }
+};
+
 document.getElementById('pDescrizione').addEventListener('input', e => {
   document.getElementById('pConta').textContent = e.target.value.length;
 });
@@ -5721,9 +5980,8 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
   if (titolo.length < 8)      return avvisoPub('Il titolo è troppo corto: descrivi cosa farete.');
   if (!citta)                 return avvisoPub('Indica la città.');
   if (!prezzo || prezzo < 1)  return avvisoPub('Inserisci un prezzo valido.');
-  const fotoInserita = val('pFoto');
-  if (fotoInserita && !urlSicura(fotoInserita))
-    return avvisoPub('Il link della foto deve iniziare con https://');
+  if (fotoScelte.some(v => v.stato !== 'pronta'))
+    return avvisoPub('Aspetta un attimo: sto ancora preparando le foto.');
   if (!maxPersone || maxPersone < 1) return avvisoPub('Indica quante persone puoi accogliere.');
   if (!durata)                return avvisoPub('Indica la durata.');
   if (descrizione.length < 40) return avvisoPub('La descrizione è troppo breve. Racconta qualcosa in più.');
@@ -5739,8 +5997,11 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
 
   setLoading(btn, false);
   setLoading(btn, true, 'Pubblicazione...');
+  const copertina = fotoScelte[0] ? fotoScelte[0].piccola : '';
+  const extra = fotoScelte.slice(1).map(v => v.grande);
+  let fotoNonSalvate = false;
   try {
-    await addDoc(refEsperienze(), {
+    const nuova = await addDoc(refEsperienze(), {
       lat: geo ? geo.lat : null,
       lng: geo ? geo.lng : null,
       luogoCompleto: geo ? geo.nome : citta,
@@ -5748,21 +6009,43 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
       categoria: val('pCategoria') || document.getElementById('pCategoria').value,
       orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean),
       incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean),
-      foto: urlSicura(fotoInserita),
+      foto: copertina,
+      fotoExtra: extra.length,
       autoreUid: user.uid,
       autoreNome: user.displayName || user.email.split('@')[0],
       autoreFoto: user.photoURL || '',
       creato: serverTimestamp()
     });
-    avvisoPub('Esperienza pubblicata.', true);
-    ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso','pFoto']
+
+    // Le altre foto, una per documento (ognuna può pesare fino a ~250 KB)
+    if (extra.length) {
+      setLoading(btn, false);
+      setLoading(btn, true, 'Carico le foto...');
+      try {
+        for (let i = 0; i < extra.length; i++) {
+          await setDoc(doc(db, 'esperienze', nuova.id, 'foto', 'f' + (i + 1)),
+            { src: extra[i], ordine: i + 1, creato: serverTimestamp() });
+        }
+      } catch (e) {
+        console.error('Foto extra:', e);
+        fotoNonSalvate = true;
+        try { await updateDoc(nuova, { fotoExtra: 0 }); } catch {}
+      }
+    }
+
+    avvisoPub(fotoNonSalvate
+      ? 'Esperienza pubblicata con la sola copertina: le altre foto sono state bloccate dalle regole di Firestore.'
+      : 'Esperienza pubblicata.', !fotoNonSalvate);
+    ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso']
       .forEach(id => document.getElementById(id).value = '');
+    fotoScelte = [];
+    disegnaFoto();
     document.getElementById('pConta').textContent = '0';
     esitoCitta.textContent = '';
     esitoGeo = null;
     chiudiProposte();
     await caricaEsperienze();
-    setTimeout(() => { chiudiPubblica(); toast('La tua esperienza è online', true); }, 1200);
+    setTimeout(() => { chiudiPubblica(); toast('La tua esperienza è online', true); }, fotoNonSalvate ? 3500 : 1200);
   } catch (e) {
     console.error(e);
     avvisoPub('Pubblicazione non riuscita. ' + spiegaDb(e));
@@ -5774,6 +6057,11 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
 async function eliminaEsperienza(id) {
   if (!confirm('Rimuovere questa esperienza? L\'operazione non si annulla.')) return;
   try {
+    // Prima le foto extra (le regole controllano l'autore sul documento principale)
+    try {
+      const foto = await getDocs(collection(db, 'esperienze', id, 'foto'));
+      await Promise.all(foto.docs.map(d => deleteDoc(d.ref)));
+    } catch (e) { console.warn('Foto extra non rimosse:', e); }
     await deleteDoc(doc(db, 'esperienze', id));
     toast('Esperienza rimossa');
     await caricaEsperienze();
