@@ -3616,6 +3616,52 @@
     .modal-wide { max-height: 92vh; max-height: calc(100dvh - 1rem); }
     .modal-wide .modal-close { margin: -1.4rem -0.7rem 0 0.5rem; }
   }
+  /* ===== SELETTORI DEL MODULO (niente da scrivere) ===== */
+  select.form-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238A7F72' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+  }
+  .campo-euro { position: relative; }
+  .campo-euro .form-input { padding-right: 2.4rem; }
+  .campo-euro span {
+    position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+    color: var(--warm-gray); font-size: 0.9rem; pointer-events: none;
+  }
+  .stepper { display: flex; gap: 0.4rem; align-items: stretch; }
+  .stepper-btn {
+    flex: 0 0 46px;
+    border-radius: 10px;
+    border: 1.5px solid var(--sand);
+    background: white;
+    font-size: 1.25rem;
+    color: var(--charcoal);
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .stepper-btn:hover { border-color: var(--terra); color: var(--terra); }
+  .stepper-val { text-align: center; font-weight: 600; -moz-appearance: textfield; }
+  .stepper-val::-webkit-outer-spin-button,
+  .stepper-val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .chip-scelte { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip-scelta {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.5rem 0.85rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--sand);
+    background: white;
+    color: var(--warm-gray);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .chip-scelta:hover { border-color: var(--terra); color: var(--terra); }
+  .chip-scelta.on { background: var(--terra); border-color: var(--terra); color: white; }
+  .orario-altro { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; }
+  .orario-altro .form-input { width: auto; max-width: 150px; padding: 0.6rem 0.8rem; }
+  .orario-altro .ag-btn { padding: 0.6rem 0.9rem; }
 </style>
 </head>
 <body>
@@ -4397,30 +4443,58 @@
       </div>
     </div>
 
-    <div class="form-row form-row-3">
+    <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Prezzo €</label>
-        <input type="number" class="form-input" id="pPrezzo" min="1" max="2000" placeholder="45">
+        <label class="form-label" for="pPrezzo">Prezzo a persona</label>
+        <div class="campo-euro">
+          <input type="number" class="form-input" id="pPrezzo" min="1" max="2000" placeholder="45" inputmode="numeric">
+          <span>€</span>
+        </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Durata</label>
-        <input type="text" class="form-input" id="pDurata" maxlength="20" placeholder="3 ore">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Max persone</label>
-        <input type="number" class="form-input" id="pMax" min="1" max="50" placeholder="8">
+        <label class="form-label" for="pDurata">Durata</label>
+        <select class="form-input" id="pDurata">
+          <option value="">Scegli…</option>
+          <option>30 minuti</option>
+          <option>1 ora</option>
+          <option>1 ora e mezza</option>
+          <option>2 ore</option>
+          <option>2 ore e mezza</option>
+          <option>3 ore</option>
+          <option>4 ore</option>
+          <option>5 ore</option>
+          <option>6 ore</option>
+          <option>Mezza giornata</option>
+          <option>Giornata intera</option>
+        </select>
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Lingue</label>
-        <input type="text" class="form-input" id="pLingue" maxlength="40" placeholder="IT, EN">
+        <label class="form-label" for="pMax">Persone per orario</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-passo="-1" aria-label="Meno persone">−</button>
+          <input type="number" class="form-input stepper-val" id="pMax" min="1" max="50" value="8" inputmode="numeric">
+          <button type="button" class="stepper-btn" data-passo="1" aria-label="Più persone">+</button>
+        </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Orari disponibili</label>
-        <input type="text" class="form-input" id="pOrari" maxlength="60" placeholder="10:00, 15:00">
+        <label class="form-label">Lingue</label>
+        <div class="chip-scelte" id="pLingueScelte"></div>
+        <input type="hidden" id="pLingue" value="IT">
       </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Orari <span class="form-label-nota">tocca per scegliere, anche più di uno</span></label>
+      <div class="chip-scelte" id="pOrariScelte"></div>
+      <div class="orario-altro">
+        <input type="time" class="form-input" id="pOrarioAltro" step="900" aria-label="Altro orario">
+        <button type="button" class="ag-btn" id="pOrarioAggiungi">+ Aggiungi orario</button>
+      </div>
+      <input type="hidden" id="pOrari" value="">
+      <div class="form-hint" id="pOrariHint"></div>
     </div>
 
     <div class="form-group">
@@ -6362,10 +6436,104 @@ document.addEventListener('click', e => {
 /* ---------- Pubblicazione ---------- */
 let espInModifica = null;     // id dell'esperienza aperta in modifica, altrimenti null
 
+/* ---------- Selettori: orari, lingue, persone, durata ----------
+   I valori restano in campi nascosti (pOrari, pLingue) nello stesso
+   formato di prima ("10:00, 15:00"), così il salvataggio non cambia. */
+const ORARI_PROPOSTI = ['09:00', '10:00', '11:00', '15:00', '17:00', '18:00', '20:00'];
+const LINGUE_PROPOSTE = [['IT', '🇮🇹 Italiano'], ['EN', '🇬🇧 English'], ['FR', '🇫🇷 Français'],
+                         ['DE', '🇩🇪 Deutsch'], ['ES', '🇪🇸 Español']];
+const MAX_ORARI = 8;
+const listaDa = id => document.getElementById(id).value.split(',').map(x => x.trim()).filter(Boolean);
+const salvaLista = (id, arr) => { document.getElementById(id).value = arr.join(', '); };
+const ordinaOrari = arr => [...new Set(arr)].sort((a, b) => a.localeCompare(b, 'it', { numeric: true }));
+
+function disegnaScelte() {
+  const orari = listaDa('pOrari');
+  const tutti = ordinaOrari([...ORARI_PROPOSTI, ...orari]);
+  document.getElementById('pOrariScelte').innerHTML = tutti.map(o => {
+    const on = orari.includes(o);
+    return `<button type="button" class="chip-scelta${on ? ' on' : ''}" data-orario="${esc2(o)}" aria-pressed="${on}">${esc2(o)}</button>`;
+  }).join('');
+  document.getElementById('pOrariHint').textContent = orari.length
+    ? (orari.length === 1 ? 'Scelto: ' : 'Scelti: ') + ordinaOrari(orari).join(' · ')
+    : 'Nessun orario scelto.';
+
+  const lingue = listaDa('pLingue');
+  const sigle = LINGUE_PROPOSTE.map(l => l[0]);
+  const ha = c => lingue.some(l => l.toUpperCase() === c);
+  const extra = lingue.filter(l => !sigle.includes(l.toUpperCase()));   // es. vecchi "Italiano"
+  document.getElementById('pLingueScelte').innerHTML =
+    LINGUE_PROPOSTE.map(([c, et]) =>
+      `<button type="button" class="chip-scelta${ha(c) ? ' on' : ''}" data-lingua="${c}" aria-pressed="${ha(c)}">${et}</button>`).join('') +
+    extra.map(x => `<button type="button" class="chip-scelta on" data-lingua="${esc2(x)}" aria-pressed="true">${esc2(x)}</button>`).join('');
+}
+
+function impostaDurata(v) {
+  const sel = document.getElementById('pDurata');
+  if (v && ![...sel.options].some(o => o.value === v)) sel.add(new Option(v, v));   // durata scritta a mano in passato
+  sel.value = v || '';
+}
+
+function valoriPredefiniti() {
+  document.getElementById('pMax').value = 8;
+  document.getElementById('pLingue').value = 'IT';
+  document.getElementById('pOrari').value = '';
+  document.getElementById('pDurata').value = '';
+  disegnaScelte();
+}
+
+document.getElementById('pOrariScelte').addEventListener('click', e => {
+  const c = e.target.closest('[data-orario]');
+  if (!c) return;
+  let orari = listaDa('pOrari');
+  if (orari.includes(c.dataset.orario)) orari = orari.filter(o => o !== c.dataset.orario);
+  else if (orari.length >= MAX_ORARI) { document.getElementById('pOrariHint').textContent = `Massimo ${MAX_ORARI} orari.`; return; }
+  else orari.push(c.dataset.orario);
+  salvaLista('pOrari', ordinaOrari(orari));
+  disegnaScelte();
+});
+
+function aggiungiOrarioAltro() {
+  const campo = document.getElementById('pOrarioAltro');
+  const v = campo.value;                       // "HH:MM" dal selettore dell'ora
+  if (!/^\d{2}:\d{2}$/.test(v)) { campo.focus(); return; }
+  const orari = listaDa('pOrari');
+  if (!orari.includes(v)) {
+    if (orari.length >= MAX_ORARI) { document.getElementById('pOrariHint').textContent = `Massimo ${MAX_ORARI} orari.`; return; }
+    salvaLista('pOrari', ordinaOrari([...orari, v]));
+  }
+  campo.value = '';
+  disegnaScelte();
+}
+document.getElementById('pOrarioAggiungi').addEventListener('click', aggiungiOrarioAltro);
+document.getElementById('pOrarioAltro').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); aggiungiOrarioAltro(); }
+});
+
+document.getElementById('pLingueScelte').addEventListener('click', e => {
+  const c = e.target.closest('[data-lingua]');
+  if (!c) return;
+  const x = c.dataset.lingua;
+  let lingue = listaDa('pLingue');
+  lingue = lingue.some(l => l.toUpperCase() === x.toUpperCase())
+    ? lingue.filter(l => l.toUpperCase() !== x.toUpperCase())
+    : [...lingue, x];
+  salvaLista('pLingue', lingue);
+  disegnaScelte();
+});
+
+document.querySelectorAll('.stepper-btn').forEach(b => b.addEventListener('click', () => {
+  const campo = document.getElementById('pMax');
+  const n = (parseInt(campo.value) || 0) + Number(b.dataset.passo);
+  campo.value = Math.min(50, Math.max(1, n));
+}));
+disegnaScelte();
+
 function svuotaModulo() {
   ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso']
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('pCategoria').selectedIndex = 0;
+  valoriPredefiniti();
   fotoScelte = [];
   disegnaFoto();
   document.getElementById('pConta').textContent = '0';
@@ -6403,10 +6571,15 @@ window.apriPubblica = async (id) => {
     metti('pCitta', e.citta);
     metti('pCategoria', e.categoria);
     metti('pPrezzo', e.prezzo);
-    metti('pDurata', e.durata);
+    impostaDurata(e.durata);
     metti('pMax', e.maxPersone);
-    metti('pLingue', e.lingue);
+    // Lingue scritte a mano in passato ("Italiano", "inglese") → sigle dei pulsanti
+    const SIGLE = { italiano: 'IT', italian: 'IT', inglese: 'EN', english: 'EN', francese: 'FR', french: 'FR',
+                    francais: 'FR', tedesco: 'DE', german: 'DE', deutsch: 'DE', spagnolo: 'ES', spanish: 'ES', espanol: 'ES' };
+    metti('pLingue', [...new Set(e.lingue.split(',').map(x => x.trim()).filter(Boolean)
+      .map(x => SIGLE[normalizza(x)] || x))].join(', '));
     metti('pOrari', e.orari.join(', '));
+    disegnaScelte();
     metti('pDescrizione', e.desc);
     metti('pIncluso', e.incluso.join(', '));
     document.getElementById('pConta').textContent = e.desc.length;
@@ -6604,7 +6777,8 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
   if (fotoScelte.some(v => v.stato !== 'pronta'))
     return avvisoPub('Aspetta un attimo: sto ancora preparando le foto.');
   if (!maxPersone || maxPersone < 1 || maxPersone > 50) return avvisoPub('Indica quante persone puoi accogliere (da 1 a 50).');
-  if (!durata)                return avvisoPub('Indica la durata.');
+  if (!durata)                return avvisoPub('Scegli la durata.');
+  if (!val('pOrari'))         return avvisoPub('Scegli almeno un orario.');
 
   const btn = document.getElementById('btnPubblica');
   setLoading(btn, true, 'Cerco il luogo...');
