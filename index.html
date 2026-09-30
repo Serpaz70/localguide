@@ -3580,6 +3580,23 @@
     color: white;
     margin-bottom: 0.1rem;
   }
+  /* Tasto "Vicino a me" sulla mappa */
+  .btn-vicino {
+    margin-top: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--terra);
+    background: white;
+    color: var(--terra);
+    cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .btn-vicino:hover { background: var(--terra); color: white; }
+  .btn-vicino:disabled { opacity: 0.6; cursor: wait; }
+  .guide-card:focus-visible { outline: 2px solid var(--terra); outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -4089,8 +4106,9 @@
   <div class="map-wrapper reveal">
     <div class="map-sidebar">
       <div class="map-sidebar-header">
-        <div class="map-sidebar-title">Esperienze vicino a te</div>
+        <div class="map-sidebar-title">Esperienze sulla mappa</div>
         <div class="map-sidebar-sub" id="mapSidebarSub">Nessuna esperienza</div>
+        <button class="btn-vicino" id="btnVicino" type="button">📍 Vicino a me</button>
       </div>
       <div class="map-exp-list" id="mapExpList"></div>
     </div>
@@ -4641,6 +4659,7 @@
     luogo: null,     // se il testo è un luogo: { nome, nomeBreve, lat, lng, bbox, punteggio }
     testoRisolto: '',// testo per cui si è già deciso "luogo" o "parole chiave"
     inAttesa: false, // sto chiedendo a Photon se il testo è un luogo
+    guida: null,     // { uid, nome } se si guardano le esperienze di una guida
     cat: 'all',
     data: '',
     persone: 0
@@ -4701,7 +4720,7 @@
 
     // SICUREZZA: anche gli orari sono testo libero
     document.getElementById('bookingTime').innerHTML =
-      e.orari.map(o => '<option>' + esc2(o) + '</option>').join('');
+      e.orari.map(o => '<option value="' + esc2(o) + '">' + esc2(o) + '</option>').join('');
 
     // Limite partecipanti dal gruppo dichiarato
     const max = e.maxPersone || parseInt((e.gruppo.match(/\d+/) || [8])[0]);
@@ -4816,22 +4835,22 @@
 
     // I marker vengono creati da aggiornaMappa() quando i dati arrivano da Firestore
 
-    // Geolocalizzazione utente
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const { latitude, longitude } = pos.coords;
-        const userIcon = L.divIcon({
-          html: `<div style="width:16px;height:16px;background:#C4602A;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(196,96,42,0.5)"></div>`,
-          className: '',
-          iconSize: [16, 16],
-          iconAnchor: [8, 8]
-        });
-        L.marker([latitude, longitude], { icon: userIcon })
-          .addTo(leafletMap)
-          .bindPopup('<div style="font-size:0.8rem;font-weight:600">📍 Sei qui</div>');
-      });
-    }
+    // La posizione NON si chiede all'apertura: solo col tasto "Vicino a me"
   }
+
+  // Segna (o sposta) il punto "Sei qui" sulla mappa
+  let markerUtente = null;
+  window.segnaPosizione = (lat, lng) => {
+    if (!leafletMap) return;
+    if (markerUtente) { markerUtente.setLatLng([lat, lng]); return; }
+    const userIcon = L.divIcon({
+      html: `<div style="width:16px;height:16px;background:#C4602A;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(196,96,42,0.5)"></div>`,
+      className: '', iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+    markerUtente = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 })
+      .addTo(leafletMap)
+      .bindPopup('<div style="font-size:0.8rem;font-weight:600">📍 Sei qui</div>');
+  };
 
   // Init mappa quando DOM è pronto
   // Se la mappa non parte (Leaflet non caricato, rete lenta) le esperienze
@@ -5207,6 +5226,35 @@ const slotId = (data, orario) => data + '_' + String(orario || '').replace(/[^0-
 const refSlot = (espId, data, orario) => doc(db, 'esperienze', espId, 'slot', slotId(data, orario));
 const numeroSicuro = x => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
+/* ---------- Orari già passati (solo per oggi) ---------- */
+// Gli orari sono testo libero ("10:00", "9.30", "18"): se non si capisce
+// l'ora, l'orario resta prenotabile.
+function orarioPassato(data, orario) {
+  if (data < oggiISO()) return true;
+  if (data !== oggiISO()) return false;
+  const m = String(orario || '').match(/(\d{1,2})(?:[:.](\d{2}))?/);
+  if (!m) return false;
+  const ora = new Date();
+  return (+m[1]) * 60 + (+(m[2] || 0)) <= ora.getHours() * 60 + ora.getMinutes();
+}
+
+// Disabilita nel menu gli orari di oggi già passati; se quello scelto è passato
+// passa al primo ancora valido. Restituisce false se oggi non ne resta nessuno.
+function sistemaOrari(data) {
+  const sel = document.getElementById('bookingTime');
+  let primoValido = null;
+  [...sel.options].forEach(o => {
+    if (!o.dataset.testo) o.dataset.testo = o.textContent;
+    const passato = orarioPassato(data, o.value);
+    o.disabled = passato;
+    o.textContent = o.dataset.testo + (passato ? ' · passato' : '');
+    if (!passato && primoValido === null) primoValido = o.value;
+  });
+  if (primoValido === null) return false;
+  if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = primoValido;
+  return true;
+}
+
 /* ---------- Posti liberi nel widget di prenotazione ---------- */
 let postiSeq = 0;
 window.aggiornaPosti = async function () {
@@ -5214,9 +5262,10 @@ window.aggiornaPosti = async function () {
   const btn  = document.querySelector('.booking-cta');
   const e    = CATALOGO[espCorrente];
   const data = document.getElementById('bookingDate').value;
-  const ora  = document.getElementById('bookingTime').value;
   const seq  = ++postiSeq;
   if (!e || !box) return;
+  const oggiValido = data ? sistemaOrari(data) : (sistemaOrari(''), true);
+  const ora  = document.getElementById('bookingTime').value;
 
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (uid && e.autoreUid === uid) {
@@ -5231,6 +5280,13 @@ window.aggiornaPosti = async function () {
     window.postiLiberi = null;
     box.className = 'booking-posti';
     box.textContent = `Fino a ${e.maxPersone} persone per orario. Scegli una data per vedere i posti liberi.`;
+    return;
+  }
+  if (!oggiValido) {
+    window.postiLiberi = null;
+    box.className = 'booking-posti pieno';
+    box.textContent = 'Per oggi gli orari sono già passati: scegli un altro giorno.';
+    btn.disabled = true; btn.textContent = 'Scegli un altro giorno';
     return;
   }
   box.className = 'booking-posti';
@@ -5278,7 +5334,9 @@ window.richiediLogin = async () => {
   if (!e) return false;
   if (e.autoreUid === user.uid) { toast('Non puoi prenotare la tua esperienza.'); return false; }
   if (!data) { toast('Scegli una data per continuare.'); return false; }
+  if (!orario) { toast('Scegli un orario per continuare.'); return false; }
   if (data < oggiISO()) { toast('La data scelta è già passata.'); return false; }
+  if (orarioPassato(data, orario)) { toast('Questo orario di oggi è già passato: scegline un altro.'); return false; }
 
   const testoOriginale = 'Prenota ora';
   btn.disabled = true;
@@ -5869,6 +5927,7 @@ function filtraCatalogo() {
   let voci = Object.entries(CATALOGO);
   if (RICERCA.cat !== 'all') voci = voci.filter(([, e]) => e.categoria === RICERCA.cat);
   if (RICERCA.persone)       voci = voci.filter(([, e]) => e.maxPersone >= RICERCA.persone);
+  if (RICERCA.guida)         voci = voci.filter(([, e]) => e.autoreUid === RICERCA.guida.uid);
 
   const t = normalizza(RICERCA.testo);
   if (!t) return { voci, modo: 'tutte' };
@@ -5907,7 +5966,7 @@ function filtraCatalogo() {
 }
 
 const ricercaAttiva = () =>
-  !!(RICERCA.testo || RICERCA.cat !== 'all' || RICERCA.persone || RICERCA.data);
+  !!(RICERCA.testo || RICERCA.cat !== 'all' || RICERCA.persone || RICERCA.data || RICERCA.guida);
 
 function renderInfoRisultati(esito) {
   const box = document.getElementById('risultatiInfo');
@@ -5919,6 +5978,7 @@ function renderInfoRisultati(esito) {
   if (RICERCA.testo)  chips.push(chip('testo', RICERCA.luogo
                         ? '📍 ' + RICERCA.luogo.nome
                         : '🔍 “' + RICERCA.testo + '”'));
+  if (RICERCA.guida) chips.push(chip('guida', '🧭 Con ' + RICERCA.guida.nome));
   if (RICERCA.cat !== 'all') chips.push(chip('cat', ETICHETTE_CAT[RICERCA.cat]));
   if (RICERCA.persone) chips.push(chip('persone', '👥 ' + RICERCA.persone + (RICERCA.persone === 1 ? ' persona' : ' persone')));
   if (RICERCA.data)   chips.push(chip('data', '📅 ' + new Date(RICERCA.data + 'T12:00')
@@ -5928,7 +5988,9 @@ function renderInfoRisultati(esito) {
   const conta = esito.modo === 'attesa'
     ? 'Cerco…'
     : esito.modo === 'vicine'
-      ? `Nessuna esperienza a ${esc2(RICERCA.luogo.nome)} · le più vicine (entro ${RAGGIO_VICINE} km):`
+      ? (RICERCA.luogo.vicino
+          ? `Nessuna esperienza entro 20 km da te · le più vicine (entro ${RAGGIO_VICINE} km):`
+          : `Nessuna esperienza a ${esc2(RICERCA.luogo.nome)} · le più vicine (entro ${RAGGIO_VICINE} km):`)
       : `${n} ${n === 1 ? 'risultato' : 'risultati'}`;
 
   // La data non filtra: le esperienze non hanno ancora un calendario.
@@ -5962,7 +6024,7 @@ window.renderTutte = function () {
     } else {
       box.innerHTML = statoVuoto('🔍', 'Nessun risultato',
         RICERCA.luogo
-          ? `Non ci sono ancora esperienze a ${esc2(RICERCA.luogo.nome)} né entro ${RAGGIO_VICINE} km. Prova una zona più ampia o togli un filtro.`
+          ? `Non ci sono ancora esperienze ${RICERCA.luogo.vicino ? 'vicino a te' : 'a ' + esc2(RICERCA.luogo.nome)} né entro ${RAGGIO_VICINE} km. Prova una zona più ampia o togli un filtro.`
           : RICERCA.testo
             ? 'Nessuna esperienza contiene queste parole. Prova con un luogo o con parole diverse.'
           : 'Prova a togliere un filtro.',
@@ -6081,6 +6143,7 @@ function azzeraRicerca(chiave) {
   if (chiave === 'cat' || chiave === 'tutto')     RICERCA.cat = 'all';
   if (chiave === 'persone' || chiave === 'tutto') RICERCA.persone = 0;
   if (chiave === 'data' || chiave === 'tutto')    RICERCA.data = '';
+  if (chiave === 'guida' || chiave === 'tutto')   RICERCA.guida = null;
   eseguiRicerca();
 }
 
@@ -6093,6 +6156,47 @@ campoCat.addEventListener('change', leggiCampiECerca);
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-togli]');
   if (t) { e.preventDefault(); azzeraRicerca(t.dataset.togli); }
+});
+
+// "Vicino a me": la posizione si chiede solo qui, quando l'utente la vuole
+document.getElementById('btnVicino').addEventListener('click', () => {
+  const btn = document.getElementById('btnVicino');
+  const ripristina = () => { btn.disabled = false; btn.textContent = '📍 Vicino a me'; };
+  if (!navigator.geolocation) { toast('Il tuo browser non può condividere la posizione.'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Cerco la tua posizione…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    if (window.segnaPosizione) window.segnaPosizione(lat, lng);
+    RICERCA.testo = 'Vicino a te';
+    RICERCA.luogo = { nome: 'Vicino a te', vicino: true, lat, lng, bbox: null, punteggio: 100 };
+    RICERCA.testoRisolto = 'Vicino a te';
+    eseguiRicerca();
+    ripristina();
+  }, err => {
+    ripristina();
+    toast(err.code === 1
+      ? 'Posizione non consentita: puoi attivarla dalle impostazioni del browser.'
+      : 'Non riesco a trovare la tua posizione. Riprova.');
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+});
+
+// Card guida → le sue esperienze
+const grigliaGuide = document.getElementById('grigliaGuide');
+const apriGuida = card => {
+  const uid = card.dataset.guida;
+  const g = Object.values(CATALOGO).find(e => e.autoreUid === uid);
+  if (!g) return;
+  RICERCA.guida = { uid, nome: g.guida };
+  eseguiRicerca({ scorri: true });
+};
+grigliaGuide.addEventListener('click', e => {
+  const c = e.target.closest('.guide-card[data-guida]');
+  if (c) apriGuida(c);
+});
+grigliaGuide.addEventListener('keydown', e => {
+  const c = e.target.closest('.guide-card[data-guida]');
+  if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); apriGuida(c); }
 });
 
 // Card categoria → filtra e mostra i risultati
@@ -6121,6 +6225,7 @@ document.querySelectorAll('.dest-card').forEach(c => {
 document.getElementById('linkVediTutte').addEventListener('click', e => {
   e.preventDefault();
   RICERCA.testo = ''; RICERCA.luogo = null; RICERCA.cat = 'all'; RICERCA.persone = 0; RICERCA.data = '';
+  RICERCA.guida = null;
   eseguiRicerca({ scorri: true });
 });
 
@@ -6163,7 +6268,7 @@ function renderGuide() {
   const box = document.getElementById('grigliaGuide');
   const perGuida = {};
   Object.values(CATALOGO).forEach(e => {
-    if (!perGuida[e.autoreUid]) perGuida[e.autoreUid] = { nome: e.guida, foto: e.guidaFoto, citta: new Set(), n: 0 };
+    if (!perGuida[e.autoreUid]) perGuida[e.autoreUid] = { uid: e.autoreUid, nome: e.guida, foto: e.guidaFoto, citta: new Set(), n: 0 };
     perGuida[e.autoreUid].citta.add(e.citta);
     perGuida[e.autoreUid].n++;
   });
@@ -6174,7 +6279,8 @@ function renderGuide() {
     return;
   }
   box.innerHTML = voci.map(g => `
-    <div class="guide-card">
+    <div class="guide-card" role="button" tabindex="0" data-guida="${esc2(g.uid)}"
+         aria-label="Vedi le esperienze di ${esc2(g.nome)}">
       <div class="guide-card-body" style="padding:1.5rem 1.3rem">
         <img class="guide-card-avatar" style="position:static;margin-bottom:0.8rem"
              src="${esc2(g.foto || avatarIniziali(g.nome, ''))}" alt="${esc2(g.nome)}">
@@ -6182,6 +6288,7 @@ function renderGuide() {
         <div class="guide-card-city">📍 ${esc2([...g.citta].join(', '))}</div>
         <div class="guide-card-tags">
           <span class="guide-tag terra">${g.n} ${g.n === 1 ? 'esperienza' : 'esperienze'}</span>
+          <span class="guide-tag">Vedi →</span>
         </div>
       </div>
     </div>`).join('');
