@@ -3550,6 +3550,36 @@
     color: var(--terra-light);
     margin-bottom: 1.6rem;
   }
+  /* Istruzioni "aggiungi alla Home": testo, non pulsanti */
+  .app-istruzioni {
+    border-left: 2px solid rgba(224,122,74,0.6);
+    padding: 0.2rem 0 0.2rem 1.2rem;
+    margin-bottom: 2rem;
+    max-width: 480px;
+  }
+  .app-istruzioni-titolo {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--terra-light);
+    margin-bottom: 0.8rem;
+  }
+  .app-passo {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.6rem;
+    font-weight: 300;
+  }
+  .app-passo b { color: white; font-weight: 600; }
+  .app-passo-os {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.1rem;
+  }
 </style>
 </head>
 <body>
@@ -4076,21 +4106,11 @@
     <div class="app-eyebrow">Dal telefono</div>
     <h2 class="app-title">Porta le esperienze<br><em>sempre con te</em></h2>
     <p class="app-desc">LocalGuide funziona dal browser del telefono: non c'è niente da scaricare. Aggiungilo alla schermata Home e lo apri con un tocco, come un'app.</p>
-    <div class="app-buttons">
-      <div class="app-store-btn" style="cursor:default">
-        <div class="app-store-icon">🍎</div>
-        <div class="app-store-text">
-          <div class="app-store-label">iPhone · Safari</div>
-          <div class="app-store-name">Condividi → Aggiungi a Home</div>
-        </div>
-      </div>
-      <div class="app-store-btn" style="cursor:default">
-        <div class="app-store-icon">🤖</div>
-        <div class="app-store-text">
-          <div class="app-store-label">Android · Chrome</div>
-          <div class="app-store-name">Menu ⋮ → Aggiungi a Home</div>
-        </div>
-      </div>
+    <!-- Istruzioni, non pulsanti: su iPhone non esiste un tasto "installa" -->
+    <div class="app-istruzioni">
+      <div class="app-istruzioni-titolo">Come aggiungerlo alla schermata Home</div>
+      <p class="app-passo"><span class="app-passo-os">🍎 iPhone</span>In Safari tocca <b>Condividi</b> (il quadrato con la freccia in su), poi <b>Aggiungi alla schermata Home</b>.</p>
+      <p class="app-passo"><span class="app-passo-os">🤖 Android</span>In Chrome tocca il menu <b>⋮</b> in alto a destra, poi <b>Aggiungi a schermata Home</b>.</p>
     </div>
     <div class="app-features">
       <div class="app-feature"><div class="app-feature-icon">⚡</div><div class="app-feature-text">Prenoti in pochi tocchi</div></div>
