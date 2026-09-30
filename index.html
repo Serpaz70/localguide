@@ -3662,6 +3662,115 @@
   .orario-altro { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; }
   .orario-altro .form-input { width: auto; max-width: 150px; padding: 0.6rem 0.8rem; }
   .orario-altro .ag-btn { padding: 0.6rem 0.9rem; }
+  /* ===== DISPONIBILITÀ ===== */
+  .segmenti {
+    display: inline-flex;
+    background: var(--sand);
+    border-radius: 100px;
+    padding: 3px;
+    margin-bottom: 0.8rem;
+  }
+  .segmento {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--warm-gray);
+    padding: 0.45rem 1rem;
+    border-radius: 100px;
+    cursor: pointer;
+  }
+  .segmento.on { background: white; color: var(--charcoal); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .periodo { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.7rem; }
+  .periodo label { font-size: 0.78rem; color: var(--warm-gray); display: flex; flex-direction: column; gap: 0.25rem; }
+  .periodo .form-input { width: auto; padding: 0.6rem 0.8rem; }
+  .periodo .ag-btn { padding: 0.6rem 0.9rem; }
+  .chip-scelta.passata { opacity: 0.5; text-decoration: line-through; }
+  .date-rapide { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: -0.2rem 0 0.8rem; align-items: center; }
+  .date-rapide-lab { width: 100%; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--warm-gray); font-weight: 600; }
+  .data-rapida {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.76rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--sand);
+    background: white;
+    color: var(--charcoal);
+    cursor: pointer;
+  }
+  .data-rapida:hover { border-color: var(--terra); color: var(--terra); }
+  .data-rapida.on { background: var(--terra); border-color: var(--terra); color: white; }
+  /* ===== FOTO A SCHERMO INTERO ===== */
+  .exp-detail-gallery .gal-main { position: relative; }
+  .exp-detail-gallery.senza-foto img { cursor: default; }
+  .exp-detail-gallery.senza-foto img:hover { opacity: 1; }
+  .gal-conta {
+    position: absolute;
+    right: 0.8rem; bottom: 0.8rem;
+    background: rgba(28,28,28,0.72);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    border-radius: 100px;
+    pointer-events: none;
+  }
+  .gal-conta[hidden] { display: none; }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 450;
+    background: rgba(12,12,12,0.94);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s;
+    touch-action: pan-y;
+  }
+  .lightbox[hidden] { display: none; }
+  .lightbox.aperto { opacity: 1; }
+  .lightbox img {
+    max-width: calc(100vw - 7rem);
+    max-height: calc(100vh - 6rem);
+    max-height: calc(100dvh - 6rem);
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    user-select: none;
+  }
+  .lb-chiudi, .lb-freccia {
+    position: absolute;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s;
+  }
+  .lb-chiudi:hover, .lb-freccia:hover { background: rgba(255,255,255,0.25); }
+  .lb-chiudi { top: 1rem; right: 1rem; width: 44px; height: 44px; font-size: 1.2rem; }
+  .lb-freccia { top: 50%; transform: translateY(-50%); width: 48px; height: 48px; font-size: 2rem; line-height: 1; padding-bottom: 4px; }
+  .lb-freccia[hidden] { display: none; }
+  .lb-prec { left: 1rem; }
+  .lb-succ { right: 1rem; }
+  .lb-conta {
+    position: absolute;
+    bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  @media (max-width: 640px) {
+    .lightbox img { max-width: 100vw; border-radius: 0; }
+    .lb-freccia { width: 40px; height: 40px; background: rgba(0,0,0,0.4); }
+    .lb-prec { left: 0.5rem; }
+    .lb-succ { right: 0.5rem; }
+  }
 </style>
 </head>
 <body>
@@ -4051,7 +4160,7 @@
   <div class="exp-detail">
     <button class="exp-detail-close" onclick="closeExpDetail()" aria-label="Chiudi">✕</button>
     <div class="exp-detail-gallery">
-      <div class="gal-main"><img id="dImg0" src="" alt=""></div>
+      <div class="gal-main"><img id="dImg0" src="" alt=""><span class="gal-conta" id="dGalConta" hidden></span></div>
       <div><img id="dImg1" src="" alt=""></div>
       <div><img id="dImg2" src="" alt=""></div>
     </div>
@@ -4073,7 +4182,7 @@
             <span class="exp-detail-meta-val" id="dLingue"></span>
           </div>
           <div class="exp-detail-meta-item">
-            <span class="exp-detail-meta-label">Età minima</span>
+            <span class="exp-detail-meta-label">Quando</span>
             <span class="exp-detail-meta-val" id="dEta"></span>
           </div>
         </div>
@@ -4130,6 +4239,7 @@
             <span class="booking-input-label">Partecipanti</span>
             <input class="booking-input" type="number" value="2" min="1" id="bookingGuests" oninput="updateBooking()">
           </div>
+          <div class="date-rapide" id="bookingDateRapide"></div>
           <div class="booking-posti" id="bookingPosti" aria-live="polite"></div>
           <div class="booking-breakdown">
             <div class="booking-line"><span id="bookingLineLabel"></span><span id="bookingLineTotal"></span></div>
@@ -4403,6 +4513,15 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- FOTO A SCHERMO INTERO -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Foto dell'esperienza" hidden>
+  <button type="button" class="lb-chiudi" aria-label="Chiudi">✕</button>
+  <button type="button" class="lb-freccia lb-prec" aria-label="Foto precedente">‹</button>
+  <img id="lbImg" alt="">
+  <button type="button" class="lb-freccia lb-succ" aria-label="Foto successiva">›</button>
+  <div class="lb-conta" id="lbConta"></div>
+</div>
+
 <!-- MODULO PUBBLICA ESPERIENZA -->
 <div class="modal-overlay" id="pubblicaOverlay">
   <div class="modal modal-wide">
@@ -4495,6 +4614,30 @@
       </div>
       <input type="hidden" id="pOrari" value="">
       <div class="form-hint" id="pOrariHint"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Quando</label>
+      <div class="segmenti" role="group" aria-label="Tipo di disponibilità">
+        <button type="button" class="segmento on" data-modo="settimana">Ogni settimana</button>
+        <button type="button" class="segmento" data-modo="date">Date precise</button>
+      </div>
+      <div id="quandoSettimana">
+        <div class="chip-scelte" id="pGiorniScelte"></div>
+        <div class="periodo">
+          <label>Dal <input type="date" class="form-input" id="pDal"></label>
+          <label>Al <input type="date" class="form-input" id="pAl"></label>
+          <button type="button" class="ag-btn" id="pPeriodoTogli">Tutto l'anno</button>
+        </div>
+      </div>
+      <div id="quandoDate" hidden>
+        <div class="orario-altro">
+          <input type="date" class="form-input" id="pDataNuova" aria-label="Data">
+          <button type="button" class="ag-btn" id="pDataAggiungi">+ Aggiungi data</button>
+        </div>
+        <div class="chip-scelte" id="pDateScelte" style="margin-top:0.6rem"></div>
+      </div>
+      <div class="form-hint" id="pQuandoHint"></div>
     </div>
 
     <div class="form-group">
@@ -4745,6 +4888,73 @@
   }
 
   /* ============================================================
+     DISPONIBILITÀ — quando la guida propone l'esperienza
+       giorni: [1..6,0] giorni della settimana (0 = domenica); vuoto = tutti
+       dal/al: periodo facoltativo 'AAAA-MM-GG'
+       date:   se non è vuota, SOLO queste date (esperienze occasionali)
+     ============================================================ */
+  const GIORNI_ORDINE = [1, 2, 3, 4, 5, 6, 0];
+  const GIORNI_BREVI  = { 1: 'Lun', 2: 'Mar', 3: 'Mer', 4: 'Gio', 5: 'Ven', 6: 'Sab', 0: 'Dom' };
+  const GIORNI_LUNGHI = { 1: 'il lunedì', 2: 'il martedì', 3: 'il mercoledì', 4: 'il giovedì',
+                          5: 'il venerdì', 6: 'il sabato', 0: 'la domenica' };
+  const isoDi = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(d.getDate()).padStart(2, '0');
+  const giornoDi = iso => new Date(iso + 'T12:00').getDay();
+  const dataBreve = iso => new Date(iso + 'T12:00')
+    .toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+
+  function disponibileIl(e, iso) {
+    if (!iso || iso < oggiISO()) return false;
+    if (e.date && e.date.length) return e.date.includes(iso);
+    if (e.dal && iso < e.dal) return false;
+    if (e.al && iso > e.al) return false;
+    return !e.giorni || !e.giorni.length || e.giorni.includes(giornoDi(iso));
+  }
+
+  // Le prossime n date prenotabili (entro sei mesi)
+  function prossimeDate(e, n) {
+    if (e.date && e.date.length) return e.date.filter(d => d >= oggiISO()).slice(0, n);
+    const out = [], d = new Date();
+    for (let i = 0; i < 183 && out.length < n; i++, d.setDate(d.getDate() + 1)) {
+      const iso = isoDi(d);
+      if (disponibileIl(e, iso)) out.push(iso);
+    }
+    return out;
+  }
+
+  // "Lun–Sab · fino al 31 ott", "Tutti i giorni", "12 ott, 19 ott e altre 2 date"
+  function riassuntoDisponibilita(e) {
+    if (e.date && e.date.length) {
+      const future = e.date.filter(d => d >= oggiISO());
+      if (!future.length) return 'Nessuna data in programma';
+      if (future.length <= 3) return future.map(dataBreve).join(', ');
+      return future.slice(0, 2).map(dataBreve).join(', ') + ` e altre ${future.length - 2} date`;
+    }
+    const g = (e.giorni && e.giorni.length) ? GIORNI_ORDINE.filter(x => e.giorni.includes(x)) : GIORNI_ORDINE;
+    let testo;
+    if (g.length === 7) testo = 'Tutti i giorni';
+    else {
+      const pos = g.map(x => GIORNI_ORDINE.indexOf(x));
+      const consecutivi = pos.every((v, i) => i === 0 || v === pos[i - 1] + 1);
+      testo = consecutivi && g.length >= 3
+        ? GIORNI_BREVI[g[0]] + '–' + GIORNI_BREVI[g[g.length - 1]]
+        : g.map(x => GIORNI_BREVI[x]).join(', ');
+    }
+    if (e.dal && e.al) testo += ` · dal ${dataBreve(e.dal)} al ${dataBreve(e.al)}`;
+    else if (e.al)     testo += ` · fino al ${dataBreve(e.al)}`;
+    else if (e.dal)    testo += ` · dal ${dataBreve(e.dal)}`;
+    return testo;
+  }
+
+  // Perché quella data non va bene, detto in modo umano
+  function motivoNonDisponibile(e, iso) {
+    if (e.date && e.date.length) return 'La guida non propone questa esperienza in questa data.';
+    if (e.dal && iso < e.dal) return `L'esperienza parte dal ${dataBreve(e.dal)}.`;
+    if (e.al && iso > e.al)   return `L'esperienza è disponibile fino al ${dataBreve(e.al)}.`;
+    return `La guida non propone questa esperienza ${GIORNI_LUNGHI[giornoDi(iso)]}.`;
+  }
+
+  /* ============================================================
      STATO DELLA RICERCA — condiviso con il modulo Firestore
      ============================================================ */
   const RICERCA = {
@@ -4774,7 +4984,7 @@
     set('dDurata', e.durata);
     set('dGruppo', e.gruppo);
     set('dLingue', e.lingue);
-    set('dEta', e.eta);
+    set('dEta', riassuntoDisponibilita(e));
 
     // SICUREZZA: la descrizione è testo scritto dagli utenti.
     // Prima si neutralizza l'HTML, POI si trasformano gli a capo in <br>.
@@ -4825,9 +5035,13 @@
 
     // Non si prenota nel passato (data LOCALE, non UTC)
     const dataInput = document.getElementById('bookingDate');
-    dataInput.min = oggiISO();
-    if (RICERCA.data && RICERCA.data >= oggiISO()) dataInput.value = RICERCA.data;
-    else if (dataInput.value && dataInput.value < oggiISO()) dataInput.value = '';
+    const future = (e.date || []).filter(d => d >= oggiISO());
+    dataInput.min = [oggiISO(), e.dal || '', future[0] || ''].sort().pop();
+    dataInput.max = future.length ? future[future.length - 1] : (e.al || '');
+    // La data cercata passa nel modulo solo se la guida c'è quel giorno
+    if (RICERCA.data && disponibileIl(e, RICERCA.data)) dataInput.value = RICERCA.data;
+    else if (dataInput.value && !disponibileIl(e, dataInput.value)) dataInput.value = '';
+    disegnaDateRapide(e);
 
     window.postiLiberi = null;      // si ricalcola per data e orario scelti
     updateBooking();
@@ -4843,8 +5057,16 @@
     document.body.style.overflow = 'hidden';
   }
   // Una, due o tre foto: la galleria cambia forma invece di ripetere la stessa immagine
+  let galleriaCorrente = [];     // foto vere dell'esperienza aperta (senza segnaposto)
+  let galleriaAlt = '';
   function mostraGalleria(srcs, alt) {
     const lista = (srcs || []).filter(Boolean).slice(0, 3);
+    galleriaCorrente = [...new Set(lista)].filter(src => src !== FOTO_NEUTRA);
+    galleriaAlt = alt || '';
+    const conta = document.getElementById('dGalConta');
+    conta.hidden = galleriaCorrente.length < 2;
+    conta.textContent = '📷 ' + galleriaCorrente.length + ' foto';
+    document.querySelector('.exp-detail-gallery').classList.toggle('senza-foto', !galleriaCorrente.length);
     const n = Math.max(1, lista.length);
     const gal = document.querySelector('.exp-detail-gallery');
     gal.classList.remove('n1', 'n2', 'n3');
@@ -4857,7 +5079,83 @@
     });
   }
 
+  /* ---------- Foto a schermo intero ---------- */
+  let lbIndice = 0;
+  const lightbox = document.getElementById('lightbox');
+  function apriFoto(i) {
+    if (!galleriaCorrente.length) return;
+    lbIndice = Math.max(0, Math.min(i, galleriaCorrente.length - 1));
+    mostraFoto();
+    lightbox.hidden = false;
+    requestAnimationFrame(() => lightbox.classList.add('aperto'));
+  }
+  function mostraFoto() {
+    const n = galleriaCorrente.length;
+    const img = document.getElementById('lbImg');
+    img.src = galleriaCorrente[lbIndice];
+    img.alt = galleriaAlt + (n > 1 ? ` — foto ${lbIndice + 1} di ${n}` : '');
+    document.getElementById('lbConta').textContent = n > 1 ? `${lbIndice + 1} / ${n}` : '';
+    lightbox.querySelectorAll('.lb-freccia').forEach(b => { b.hidden = n < 2; });
+  }
+  function chiudiFoto() {
+    lightbox.classList.remove('aperto');
+    lightbox.hidden = true;
+  }
+  const scorriFoto = passo => {
+    const n = galleriaCorrente.length;
+    if (n < 2) return;
+    lbIndice = (lbIndice + passo + n) % n;
+    mostraFoto();
+  };
+  // Clic su una foto della scheda: si apre quella
+  document.querySelector('.exp-detail-gallery').addEventListener('click', ev => {
+    const img = ev.target.closest('img');
+    if (!img) return;
+    apriFoto(Number(img.id.replace('dImg', '')) || 0);
+  });
+  lightbox.addEventListener('click', ev => {
+    if (ev.target.closest('.lb-prec')) return scorriFoto(-1);
+    if (ev.target.closest('.lb-succ')) return scorriFoto(1);
+    if (ev.target.closest('.lb-chiudi') || ev.target === lightbox) chiudiFoto();
+  });
+  // Tastiera: prima di tutto il resto, così Esc chiude solo la foto
+  window.addEventListener('keydown', ev => {
+    if (lightbox.hidden) return;
+    if (ev.key === 'Escape') { ev.stopPropagation(); chiudiFoto(); }
+    else if (ev.key === 'ArrowLeft') { ev.stopPropagation(); scorriFoto(-1); }
+    else if (ev.key === 'ArrowRight') { ev.stopPropagation(); scorriFoto(1); }
+  }, true);
+  // Telefono: scorrimento col dito
+  let tocco = null;
+  lightbox.addEventListener('touchstart', ev => { tocco = ev.touches[0].clientX; }, { passive: true });
+  lightbox.addEventListener('touchend', ev => {
+    if (tocco === null) return;
+    const dx = ev.changedTouches[0].clientX - tocco;
+    if (Math.abs(dx) > 50) scorriFoto(dx < 0 ? 1 : -1);
+    tocco = null;
+  });
+
+  // Le prossime date disponibili, da toccare (così non si tira a indovinare)
+  function disegnaDateRapide(e) {
+    const box = document.getElementById('bookingDateRapide');
+    const date = prossimeDate(e, 6);
+    const scelta = document.getElementById('bookingDate').value;
+    box.innerHTML = date.length
+      ? '<span class="date-rapide-lab">Prossime date</span>' + date.map(d =>
+          `<button type="button" class="data-rapida${d === scelta ? ' on' : ''}" data-data="${d}">${
+            new Date(d + 'T12:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}</button>`).join('')
+      : '<span class="date-rapide-lab">Nessuna data in programma nei prossimi mesi</span>';
+  }
+  document.getElementById('bookingDateRapide').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-data]');
+    if (!b) return;
+    const campo = document.getElementById('bookingDate');
+    campo.value = b.dataset.data;
+    campo.dispatchEvent(new Event('change'));
+  });
+
   function closeExpDetail() {
+    if (!lightbox.hidden) chiudiFoto();
     document.getElementById('expDetailOverlay').classList.remove('active');
     document.body.style.overflow = '';
   }
@@ -4867,6 +5165,9 @@
   // Cambiando data o orario cambiano i posti liberi
   ['bookingDate', 'bookingTime'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => {
+      const d = document.getElementById('bookingDate').value;
+      document.querySelectorAll('#bookingDateRapide .data-rapida').forEach(b =>
+        b.classList.toggle('on', b.dataset.data === d));
       if (window.aggiornaPosti) window.aggiornaPosti();
     }));
 
@@ -5375,6 +5676,13 @@ window.aggiornaPosti = async function () {
     box.textContent = `Fino a ${e.maxPersone} persone per orario. Scegli una data per vedere i posti liberi.`;
     return;
   }
+  if (!disponibileIl(e, data)) {
+    window.postiLiberi = null;
+    box.className = 'booking-posti pieno';
+    box.textContent = motivoNonDisponibile(e, data) + ' Scegli una delle date qui sopra.';
+    btn.disabled = true; btn.textContent = 'Data non disponibile';
+    return;
+  }
   if (!oggiValido) {
     window.postiLiberi = null;
     box.className = 'booking-posti pieno';
@@ -5430,6 +5738,7 @@ window.richiediLogin = async () => {
   if (!orario) { toast('Scegli un orario per continuare.'); return false; }
   if (data < oggiISO()) { toast('La data scelta è già passata.'); return false; }
   if (orarioPassato(data, orario)) { toast('Questo orario di oggi è già passato: scegline un altro.'); return false; }
+  if (!disponibileIl(e, data)) { toast(motivoNonDisponibile(e, data)); return false; }
 
   const testoOriginale = 'Prenota ora';
   btn.disabled = true;
@@ -5717,6 +6026,7 @@ async function htmlAreaGuida(user) {
           <div class="ag-pren-meta">
             <span>📍 ${esc(e.citta)}</span><span>€${esc(e.prezzo)} / pers.</span>
             <span>👥 max ${esc(e.maxPersone)}</span>
+            <span>🗓 ${esc(riassuntoDisponibilita(e))}</span>
             <span>${n ? `🎫 ${n} ${n === 1 ? 'persona prenotata' : 'persone prenotate'}` : 'Nessuna prenotazione in arrivo'}</span>
           </div>
         </div>
@@ -5832,6 +6142,10 @@ async function caricaEsperienze() {
         img: [foto],
         fotoExtra: numero(v.fotoExtra, 0, 2) || 0,
         orari: lista(v.orari, 8).length ? lista(v.orari, 8) : ['10:00'],
+        giorni: Array.isArray(v.giorni) ? v.giorni.filter(n => Number.isInteger(n) && n >= 0 && n <= 6) : [],
+        dal: /^\d{4}-\d{2}-\d{2}$/.test(v.dal || '') ? v.dal : '',
+        al:  /^\d{4}-\d{2}-\d{2}$/.test(v.al || '') ? v.al : '',
+        date: Array.isArray(v.date) ? v.date.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(0, 60) : [],
         desc: testo(v.descrizione, 1200),      // testo grezzo: si neutralizza quando si mostra
         incluso: lista(v.incluso, 12),
         rec: []
@@ -6020,6 +6334,7 @@ function filtraCatalogo() {
   let voci = Object.entries(CATALOGO);
   if (RICERCA.cat !== 'all') voci = voci.filter(([, e]) => e.categoria === RICERCA.cat);
   if (RICERCA.persone)       voci = voci.filter(([, e]) => e.maxPersone >= RICERCA.persone);
+  if (RICERCA.data)          voci = voci.filter(([, e]) => disponibileIl(e, RICERCA.data));
   if (RICERCA.guida)         voci = voci.filter(([, e]) => e.autoreUid === RICERCA.guida.uid);
 
   const t = normalizza(RICERCA.testo);
@@ -6086,11 +6401,7 @@ function renderInfoRisultati(esito) {
           : `Nessuna esperienza a ${esc2(RICERCA.luogo.nome)} · le più vicine (entro ${RAGGIO_VICINE} km):`)
       : `${n} ${n === 1 ? 'risultato' : 'risultati'}`;
 
-  // La data non filtra: le esperienze non hanno ancora un calendario.
-  // Lo diciamo invece di fingere un filtro che non c'è.
-  const nota = RICERCA.data
-    ? '<div class="risultati-nota">La data verrà proposta quando apri un\'esperienza: la disponibilità la conferma la guida.</div>'
-    : '';
+  const nota = '';
 
   box.innerHTML = `<span class="risultati-conta">${conta}</span>${chips.join('')}
     <button class="filtro-azzera" data-togli="tutto">Azzera</button>${nota}`;
@@ -6474,12 +6785,94 @@ function impostaDurata(v) {
   sel.value = v || '';
 }
 
+/* ---------- "Quando": giorni della settimana o date precise ---------- */
+const quando = { modo: 'settimana', giorni: new Set(GIORNI_ORDINE), date: [] };
+
+function disegnaQuando() {
+  document.querySelectorAll('.segmento').forEach(b => {
+    const on = b.dataset.modo === quando.modo;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+  });
+  document.getElementById('quandoSettimana').hidden = quando.modo !== 'settimana';
+  document.getElementById('quandoDate').hidden = quando.modo !== 'date';
+  document.getElementById('pGiorniScelte').innerHTML = GIORNI_ORDINE.map(g => {
+    const on = quando.giorni.has(g);
+    return `<button type="button" class="chip-scelta${on ? ' on' : ''}" data-giorno="${g}" aria-pressed="${on}">${GIORNI_BREVI[g]}</button>`;
+  }).join('');
+  const oggi = oggiISO();
+  document.getElementById('pDateScelte').innerHTML = quando.date.map(d =>
+    `<button type="button" class="chip-scelta on${d < oggi ? ' passata' : ''}" data-data-togli="${d}" title="Togli">${
+      new Date(d + 'T12:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })} ✕</button>`).join('');
+  ['pDal', 'pAl', 'pDataNuova'].forEach(id => { document.getElementById(id).min = oggi; });
+  // anteprima con le stesse parole che vedrà il cliente
+  const anteprima = {
+    giorni: quando.modo === 'settimana' ? [...quando.giorni] : [],
+    date: quando.modo === 'date' ? quando.date : [],
+    dal: quando.modo === 'settimana' ? document.getElementById('pDal').value : '',
+    al:  quando.modo === 'settimana' ? document.getElementById('pAl').value : ''
+  };
+  document.getElementById('pQuandoHint').textContent =
+    (quando.modo === 'settimana' && !quando.giorni.size) ? 'Scegli almeno un giorno.'
+    : (anteprima.dal && anteprima.al && anteprima.al < anteprima.dal) ? 'Attenzione: la data "Al" viene prima di "Dal".'
+    : (quando.modo === 'date' && !quando.date.length) ? 'Aggiungi almeno una data.'
+    : 'I clienti vedranno: ' + riassuntoDisponibilita(anteprima);
+}
+
+document.querySelector('.segmenti').addEventListener('click', e => {
+  const b = e.target.closest('[data-modo]');
+  if (!b) return;
+  quando.modo = b.dataset.modo;
+  disegnaQuando();
+});
+document.getElementById('pGiorniScelte').addEventListener('click', e => {
+  const b = e.target.closest('[data-giorno]');
+  if (!b) return;
+  const g = Number(b.dataset.giorno);
+  quando.giorni.has(g) ? quando.giorni.delete(g) : quando.giorni.add(g);
+  disegnaQuando();
+});
+['pDal', 'pAl'].forEach(id => document.getElementById(id).addEventListener('change', disegnaQuando));
+document.getElementById('pPeriodoTogli').addEventListener('click', () => {
+  document.getElementById('pDal').value = '';
+  document.getElementById('pAl').value = '';
+  disegnaQuando();
+});
+function aggiungiData() {
+  const campo = document.getElementById('pDataNuova');
+  const v = campo.value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { campo.focus(); return; }
+  if (v < oggiISO()) { document.getElementById('pQuandoHint').textContent = 'Questa data è già passata.'; return; }
+  if (!quando.date.includes(v)) {
+    if (quando.date.length >= 60) { document.getElementById('pQuandoHint').textContent = 'Massimo 60 date.'; return; }
+    quando.date = [...quando.date, v].sort();
+  }
+  campo.value = '';
+  disegnaQuando();
+}
+document.getElementById('pDataAggiungi').addEventListener('click', aggiungiData);
+document.getElementById('pDataNuova').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); aggiungiData(); }
+});
+document.getElementById('pDateScelte').addEventListener('click', e => {
+  const b = e.target.closest('[data-data-togli]');
+  if (!b) return;
+  quando.date = quando.date.filter(d => d !== b.dataset.dataTogli);
+  disegnaQuando();
+});
+
 function valoriPredefiniti() {
   document.getElementById('pMax').value = 8;
   document.getElementById('pLingue').value = 'IT';
   document.getElementById('pOrari').value = '';
   document.getElementById('pDurata').value = '';
   disegnaScelte();
+  quando.modo = 'settimana';
+  quando.giorni = new Set(GIORNI_ORDINE);
+  quando.date = [];
+  document.getElementById('pDal').value = '';
+  document.getElementById('pAl').value = '';
+  disegnaQuando();
 }
 
 document.getElementById('pOrariScelte').addEventListener('click', e => {
@@ -6528,6 +6921,8 @@ document.querySelectorAll('.stepper-btn').forEach(b => b.addEventListener('click
   campo.value = Math.min(50, Math.max(1, n));
 }));
 disegnaScelte();
+disegnaQuando();
+
 
 function svuotaModulo() {
   ['pTitolo','pCitta','pPrezzo','pDurata','pMax','pLingue','pOrari','pDescrizione','pIncluso']
@@ -6572,6 +6967,12 @@ window.apriPubblica = async (id) => {
     metti('pCategoria', e.categoria);
     metti('pPrezzo', e.prezzo);
     impostaDurata(e.durata);
+    quando.modo = e.date.length ? 'date' : 'settimana';
+    quando.giorni = new Set(e.giorni.length ? e.giorni : GIORNI_ORDINE);
+    quando.date = [...e.date];
+    document.getElementById('pDal').value = e.dal || '';
+    document.getElementById('pAl').value = e.al || '';
+    disegnaQuando();
     metti('pMax', e.maxPersone);
     // Lingue scritte a mano in passato ("Italiano", "inglese") → sigle dei pulsanti
     const SIGLE = { italiano: 'IT', italian: 'IT', inglese: 'EN', english: 'EN', francese: 'FR', french: 'FR',
@@ -6779,6 +7180,12 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
   if (!maxPersone || maxPersone < 1 || maxPersone > 50) return avvisoPub('Indica quante persone puoi accogliere (da 1 a 50).');
   if (!durata)                return avvisoPub('Scegli la durata.');
   if (!val('pOrari'))         return avvisoPub('Scegli almeno un orario.');
+  const dal = quando.modo === 'settimana' ? document.getElementById('pDal').value : '';
+  const al  = quando.modo === 'settimana' ? document.getElementById('pAl').value : '';
+  if (quando.modo === 'settimana' && !quando.giorni.size) return avvisoPub('Scegli almeno un giorno della settimana.');
+  if (dal && al && al < dal)  return avvisoPub('Il periodo finisce prima di cominciare: controlla le date "Dal" e "Al".');
+  if (quando.modo === 'date' && !quando.date.some(d => d >= oggiISO()))
+    return avvisoPub('Aggiungi almeno una data futura.');
 
   const btn = document.getElementById('btnPubblica');
   setLoading(btn, true, 'Cerco il luogo...');
@@ -6801,6 +7208,9 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
     titolo, citta, descrizione, prezzo, maxPersone, durata, lingue,
     categoria: document.getElementById('pCategoria').value,
     orari: val('pOrari').split(',').map(o => o.trim()).filter(Boolean).slice(0, 8),
+    giorni: quando.modo === 'settimana' ? GIORNI_ORDINE.filter(g => quando.giorni.has(g)) : [],
+    dal, al,
+    date: quando.modo === 'date' ? quando.date.filter(d => d >= oggiISO()).slice(0, 60) : [],
     incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean).slice(0, 12),
     foto: copertina,
     fotoExtra: extra.length
