@@ -3597,6 +3597,25 @@
   .btn-vicino:hover { background: var(--terra); color: white; }
   .btn-vicino:disabled { opacity: 0.6; cursor: wait; }
   .guide-card:focus-visible { outline: 2px solid var(--terra); outline-offset: 3px; }
+  /* Finestre (login, pubblica): mai più alte dello spazio DAVVERO visibile.
+     100vh sul telefono conta anche la zona sotto la barra del browser:
+     dvh no. Così la ✕ in alto non finisce fuori dallo schermo. */
+  .modal { max-height: calc(100vh - 2rem); max-height: calc(100dvh - 2rem); overflow-y: auto; }
+  .modal-close { z-index: 5; }
+  /* Nel modulo lungo la ✕ resta ferma in alto mentre si scorre */
+  .modal-wide .modal-close {
+    position: sticky;
+    top: 0;
+    float: right;
+    margin: -1.8rem -1.8rem 0 0.5rem;
+    background: var(--cream);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  @media (max-width: 640px) {
+    .modal { max-height: 92vh; max-height: calc(100dvh - 1rem); }
+    .modal-wide { max-height: 92vh; max-height: calc(100dvh - 1rem); }
+    .modal-wide .modal-close { margin: -1.4rem -0.7rem 0 0.5rem; }
+  }
 </style>
 </head>
 <body>
@@ -6408,7 +6427,9 @@ window.apriPubblica = async (id) => {
   document.getElementById('pubAlert').className = 'auth-alert';
   const ov = document.getElementById('pubblicaOverlay');
   ov.classList.add('active');
-  ov.querySelector('.modal').scrollTop = 0;
+  const finestra = ov.querySelector('.modal');
+  finestra.scrollTop = 0;
+  requestAnimationFrame(() => { finestra.scrollTop = 0; });
   document.body.style.overflow = 'hidden';
 };
 window.chiudiPubblica = () => {
@@ -6577,14 +6598,13 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
 
   // Gli stessi limiti delle regole Firestore: meglio un messaggio chiaro qui
   // che un "permesso negato" dopo
-  if (titolo.length < 8)      return avvisoPub('Il titolo è troppo corto: descrivi cosa farete.');
+  if (!titolo)                return avvisoPub('Scrivi un titolo.');
   if (!citta)                 return avvisoPub('Indica la città.');
   if (!prezzo || prezzo < 1 || prezzo > 2000) return avvisoPub('Inserisci un prezzo tra 1 e 2000 €.');
   if (fotoScelte.some(v => v.stato !== 'pronta'))
     return avvisoPub('Aspetta un attimo: sto ancora preparando le foto.');
   if (!maxPersone || maxPersone < 1 || maxPersone > 50) return avvisoPub('Indica quante persone puoi accogliere (da 1 a 50).');
   if (!durata)                return avvisoPub('Indica la durata.');
-  if (descrizione.length < 40) return avvisoPub('La descrizione è troppo breve. Racconta qualcosa in più.');
 
   const btn = document.getElementById('btnPubblica');
   setLoading(btn, true, 'Cerco il luogo...');
