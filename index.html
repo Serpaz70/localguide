@@ -3542,6 +3542,14 @@
     .ag-pren-lato { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
     .ag-azioni { width: 100%; justify-content: flex-start; }
   }
+  .how-col-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--terra-light);
+    margin-bottom: 1.6rem;
+  }
 </style>
 </head>
 <body>
@@ -3826,6 +3834,39 @@
   </div>
 </section>
 
+<!-- COME FUNZIONA -->
+<section class="how" id="come-funziona">
+  <div class="section-header reveal">
+    <h2 class="section-title">Come<br><em>funziona</em></h2>
+  </div>
+  <div class="how-grid reveal" style="align-items:start">
+    <div class="how-steps">
+      <div class="how-col-title">Per chi viaggia</div>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <div class="step-title">Cerca un luogo o un'idea</div>
+        <div class="step-desc">Scrivi una città, una regione o una parola come "pasta" o "kayak". Trovi le esperienze lì e, se non ce ne sono, le più vicine.</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <div class="step-title">Scegli data, orario e persone</div>
+        <div class="step-desc">Vedi subito quanti posti restano. Quando prenoti, i tuoi posti sono bloccati.</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <div class="step-title">La guida ti scrive</div>
+        <div class="step-desc">Non si paga online: punto d'incontro e pagamento li concordi con la guida. Se cambi idea annulli dal tuo account.</div></div></div>
+    </div>
+    <div class="how-steps">
+      <div class="how-col-title">Per chi fa da guida</div>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <div class="step-title">Pubblica la tua esperienza</div>
+        <div class="step-desc">Foto, prezzo, orari e quante persone accogli. Bastano pochi minuti e la modifichi quando vuoi.</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <div class="step-title">Ricevi le prenotazioni</div>
+        <div class="step-desc">Nell'Area guida trovi chi ha prenotato, per quando e in quanti, con la sua email.</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <div class="step-title">Accogli i tuoi ospiti</div>
+        <div class="step-desc">Scrivi al cliente per i dettagli. Se non puoi, annulli dall'Area guida e i posti tornano liberi.</div></div></div>
+    </div>
+  </div>
+</section>
+
 <!-- COME NASCE UN'ESPERIENZA -->
 <section class="testimonials">
   <div class="section-header reveal">
@@ -3870,17 +3911,17 @@
       </div>
     </div>
     <div class="perk">
-      <div class="perk-icon">🔒</div>
+      <div class="perk-icon">✉️</div>
       <div>
-        <div class="perk-title">Pagamenti garantiti e sicuri</div>
-        <div class="perk-desc">Ricevi il pagamento 24h dopo ogni esperienza, direttamente sul tuo conto. Nessun rischio.</div>
+        <div class="perk-title">Ricevi i contatti di chi prenota</div>
+        <div class="perk-desc">Nell'Area guida vedi chi ha prenotato, quando e in quanti, con la sua email. Per ora il pagamento lo concordate direttamente voi.</div>
       </div>
     </div>
     <div class="perk">
       <div class="perk-icon">🗓️</div>
       <div>
-        <div class="perk-title">Orari totalmente flessibili</div>
-        <div class="perk-desc">Decidi tu quando essere disponibile. Non ci sono obblighi, minimi o massimi. Totale libertà.</div>
+        <div class="perk-title">Scegli tu gli orari</div>
+        <div class="perk-desc">Indichi gli orari in cui proponi l'esperienza e quante persone accogli. Li cambi quando vuoi dall'Area guida.</div>
       </div>
     </div>
     <div class="perk">
@@ -3980,11 +4021,10 @@
           <div class="booking-posti" id="bookingPosti" aria-live="polite"></div>
           <div class="booking-breakdown">
             <div class="booking-line"><span id="bookingLineLabel"></span><span id="bookingLineTotal"></span></div>
-            <div class="booking-line"><span>Commissione servizio</span><span id="bookingFee"></span></div>
             <div class="booking-line total"><span>Totale</span><span id="bookingGrandTotal"></span></div>
           </div>
           <button class="booking-cta" onclick="richiediLogin()">Prenota ora</button>
-          <p class="booking-note">Nessun pagamento online per ora · puoi annullare dal tuo account</p>
+          <p class="booking-note">Nessun pagamento online: lo concordi con la guida · puoi annullare dal tuo account</p>
         </div>
       </div>
     </div>
@@ -4033,29 +4073,29 @@
 <!-- APP BANNER -->
 <section class="app-banner">
   <div class="app-content reveal">
-    <div class="app-eyebrow">LocalGuide App</div>
+    <div class="app-eyebrow">Dal telefono</div>
     <h2 class="app-title">Porta le esperienze<br><em>sempre con te</em></h2>
-    <p class="app-desc">Prenota ovunque tu sia, ricevi notifiche in tempo reale, chatta con la tua guida e salva le esperienze che ami. Disponibile gratuitamente su iOS e Android.</p>
+    <p class="app-desc">LocalGuide funziona dal browser del telefono: non c'è niente da scaricare. Aggiungilo alla schermata Home e lo apri con un tocco, come un'app.</p>
     <div class="app-buttons">
-      <a href="#" class="app-store-btn">
+      <div class="app-store-btn" style="cursor:default">
         <div class="app-store-icon">🍎</div>
         <div class="app-store-text">
-          <div class="app-store-label">Scarica su</div>
-          <div class="app-store-name">App Store</div>
+          <div class="app-store-label">iPhone · Safari</div>
+          <div class="app-store-name">Condividi → Aggiungi a Home</div>
         </div>
-      </a>
-      <a href="#" class="app-store-btn">
-        <div class="app-store-icon">▶</div>
+      </div>
+      <div class="app-store-btn" style="cursor:default">
+        <div class="app-store-icon">🤖</div>
         <div class="app-store-text">
-          <div class="app-store-label">Disponibile su</div>
-          <div class="app-store-name">Google Play</div>
+          <div class="app-store-label">Android · Chrome</div>
+          <div class="app-store-name">Menu ⋮ → Aggiungi a Home</div>
         </div>
-      </a>
+      </div>
     </div>
     <div class="app-features">
-      <div class="app-feature"><div class="app-feature-icon">⚡</div><div class="app-feature-text">Prenotazione istantanea</div></div>
-      <div class="app-feature"><div class="app-feature-icon">💬</div><div class="app-feature-text">Chat con le guide</div></div>
-      <div class="app-feature"><div class="app-feature-icon">🗺️</div><div class="app-feature-text">Mappa offline</div></div>
+      <div class="app-feature"><div class="app-feature-icon">⚡</div><div class="app-feature-text">Prenoti in pochi tocchi</div></div>
+      <div class="app-feature"><div class="app-feature-icon">✉️</div><div class="app-feature-text">La guida ti scrive</div></div>
+      <div class="app-feature"><div class="app-feature-icon">❤️</div><div class="app-feature-text">I tuoi preferiti</div></div>
     </div>
   </div>
   <div class="app-mockup reveal">
@@ -4097,52 +4137,30 @@
 <!-- TRUST BAR -->
 <div class="trust-bar">
   <div class="trust-item">
-    <div class="trust-item-icon">🛡️</div>
-    <div class="trust-item-text"><strong>Pagamento sicuro</strong> — 100% protetto</div>
+    <div class="trust-item-icon">🎫</div>
+    <div class="trust-item-text"><strong>Posto garantito</strong> — la prenotazione blocca i posti</div>
   </div>
   <div class="trust-divider"></div>
   <div class="trust-item">
-    <div class="trust-item-icon">✅</div>
-    <div class="trust-item-text"><strong>Guide verificate</strong> — identità e recensioni reali</div>
+    <div class="trust-item-icon">✉️</div>
+    <div class="trust-item-text"><strong>Contatto diretto</strong> — la guida riceve la tua email</div>
   </div>
   <div class="trust-divider"></div>
   <div class="trust-item">
     <div class="trust-item-icon">🔄</div>
-    <div class="trust-item-text"><strong>Rimborso gratuito</strong> — fino a 48h prima</div>
+    <div class="trust-item-text"><strong>Annulli gratis</strong> — dal tuo account</div>
   </div>
   <div class="trust-divider"></div>
   <div class="trust-item">
-    <div class="trust-item-icon">💬</div>
-    <div class="trust-item-text"><strong>Supporto 24/7</strong> — sempre con te</div>
+    <div class="trust-item-icon">💶</div>
+    <div class="trust-item-text"><strong>Nessun pagamento online</strong> — lo concordi con la guida</div>
   </div>
   <div class="trust-divider"></div>
   <div class="trust-item">
     <div class="trust-item-icon">🤝</div>
-    <div class="trust-item-text"><strong>Gruppi piccoli</strong> — mai visite di massa</div>
+    <div class="trust-item-text"><strong>Posti limitati</strong> — li decide la guida</div>
   </div>
 </div>
-
-<!-- NEWSLETTER -->
-<section class="newsletter">
-  <div class="newsletter-inner reveal">
-    <div class="newsletter-eyebrow">Per i veri viaggiatori</div>
-    <h2 class="newsletter-title">Storie, posti e<br><em>persone</em> straordinarie</h2>
-    <p class="newsletter-sub">Ogni settimana una newsletter curata: esperienze selezionate, guide del mese, destinazioni emergenti e offerte riservate agli iscritti.</p>
-    <div class="newsletter-form">
-      <input class="newsletter-input" type="email" placeholder="La tua email..." id="nlEmail">
-      <button class="newsletter-btn" onclick="subscribeNewsletter()">Iscriviti</button>
-    </div>
-    <div class="newsletter-note" id="nlNote">Nessuno spam. Solo bellezza. <a href="#">Privacy policy</a></div>
-    <div class="newsletter-tags">
-      <span class="nl-tag">🍝 Cucina</span>
-      <span class="nl-tag">🏛️ Cultura</span>
-      <span class="nl-tag">🌿 Natura</span>
-      <span class="nl-tag">🎨 Arte</span>
-      <span class="nl-tag">🍷 Vino</span>
-      <span class="nl-tag">✈️ Viaggi</span>
-    </div>
-  </div>
-</section>
 
 <!-- FOOTER -->
 <footer>
@@ -4154,42 +4172,33 @@
     <div>
       <div class="footer-col-title">Esperienze</div>
       <ul class="footer-links">
-        <li><a href="#">Cucina locale</a></li>
-        <li><a href="#">Arte e cultura</a></li>
-        <li><a href="#">Avventura</a></li>
-        <li><a href="#">Enogastronomia</a></li>
-        <li><a href="#">Tour a piedi</a></li>
+        <li><a href="#tutte" data-footer-cat="cucina">Cucina locale</a></li>
+        <li><a href="#tutte" data-footer-cat="arte">Arte e cultura</a></li>
+        <li><a href="#tutte" data-footer-cat="avventura">Avventura</a></li>
+        <li><a href="#tutte" data-footer-cat="vino">Vino e cibo</a></li>
+        <li><a href="#tutte" data-footer-cat="tour">Tour a piedi</a></li>
       </ul>
     </div>
     <div>
       <div class="footer-col-title">Per le guide</div>
       <ul class="footer-links">
-        <li><a href="#">Diventa guida</a></li>
-        <li><a href="#">Come funziona</a></li>
-        <li><a href="#">Guida responsabile</a></li>
-        <li><a href="#">Risorse</a></li>
-        <li><a href="#">Community</a></li>
+        <li><a href="#" data-footer-azione="pubblica">Pubblica un'esperienza</a></li>
+        <li><a href="#" data-footer-azione="guida">Area guida</a></li>
+        <li><a href="#come-funziona">Come funziona</a></li>
       </ul>
     </div>
     <div>
-      <div class="footer-col-title">LocalGuide</div>
+      <div class="footer-col-title">Esplora</div>
       <ul class="footer-links">
-        <li><a href="#">Chi siamo</a></li>
-        <li><a href="#">Stampa</a></li>
-        <li><a href="#">Blog</a></li>
-        <li><a href="#">Lavora con noi</a></li>
-        <li><a href="#">Contatti</a></li>
+        <li><a href="#tutte" data-footer-azione="tutte">Tutte le esperienze</a></li>
+        <li><a href="#destinazioni">Destinazioni</a></li>
+        <li><a href="#mappa">Mappa</a></li>
+        <li><a href="#guide">Le guide</a></li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2025 LocalGuide S.r.l. · Privacy · Termini · Sitemap</span>
-    <div class="footer-social">
-      <a href="#" class="social-btn">𝕏</a>
-      <a href="#" class="social-btn">in</a>
-      <a href="#" class="social-btn">📷</a>
-      <a href="#" class="social-btn">▶</a>
-    </div>
+    <span>© 2026 LocalGuide</span>
   </div>
 </footer>
 
@@ -4229,7 +4238,7 @@
     <!-- VISTA: REGISTRAZIONE -->
     <div class="auth-view" id="viewSignup" style="display:none">
       <h2 class="modal-title">Crea account</h2>
-      <p class="modal-sub">Unisciti a migliaia di viaggiatori autentici</p>
+      <p class="modal-sub">Crea un account per prenotare e salvare le esperienze che ami</p>
       <button class="btn-full btn-full-google" id="btnGoogleSignup">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Continua con Google
@@ -4743,12 +4752,10 @@
     if (guests < 1)   { guests = 1;   input.value = 1; }
 
     const subtotal = e.prezzo * guests;
-    const fee = Math.round(subtotal * 0.1);
     document.getElementById('bookingLineLabel').textContent =
       `€${e.prezzo} × ${guests} ${guests === 1 ? 'persona' : 'persone'}`;
     document.getElementById('bookingLineTotal').textContent = `€${subtotal}`;
-    document.getElementById('bookingFee').textContent = `€${fee}`;
-    document.getElementById('bookingGrandTotal').textContent = `€${subtotal + fee}`;
+    document.getElementById('bookingGrandTotal').textContent = `€${subtotal}`;
   }
 
   // FILTRI CATEGORIA — stessa fonte di verità della barra di ricerca
@@ -4817,19 +4824,6 @@
 
   // MAP PIN SELECT (old version overridden above)
 
-  // NEWSLETTER
-  function subscribeNewsletter() {
-    const email = document.getElementById('nlEmail').value;
-    const note = document.getElementById('nlNote');
-    if (email && email.includes('@')) {
-      note.innerHTML = '✅ <strong>Benvenuto/a!</strong> Controlla la tua casella email.';
-      note.style.color = 'var(--moss)';
-      document.getElementById('nlEmail').value = '';
-    } else {
-      note.innerHTML = '⚠️ Inserisci un\'email valida.';
-      note.style.color = 'var(--terra)';
-    }
-  }
 
   // CARD → dettaglio della propria esperienza
   document.querySelectorAll('.exp-card, .trending-card').forEach(card => {
@@ -5299,7 +5293,7 @@ window.richiediLogin = async () => {
         data, orario,
         partecipanti:  nPers,
         prezzoUnitario: prezzo,
-        totale:        imponib + Math.round(imponib * 0.1),
+        totale:        imponib,
         stato:         'confermata',
         creato:        serverTimestamp()
       });
@@ -7004,6 +6998,27 @@ function selezionaMappa(idx, voci) {
   leafletMap.setView(voci[idx].c, 10, { animate: true });
   mappaMarker[idx].openPopup();
 }
+
+/* ---------- Link del footer ---------- */
+document.querySelector('footer').addEventListener('click', ev => {
+  const a = ev.target.closest('[data-footer-cat],[data-footer-azione]');
+  if (!a) return;
+  ev.preventDefault();
+  const az = a.dataset.footerAzione;
+  if (a.dataset.footerCat) {
+    RICERCA.cat = a.dataset.footerCat;
+    eseguiRicerca({ scorri: true });
+  } else if (az === 'tutte') {
+    document.getElementById('linkVediTutte').click();
+  } else if (az === 'pubblica') {
+    apriPubblica();
+  } else if (az === 'guida') {
+    if (!auth.currentUser) {
+      openModal('login');
+      showAuthAlert('Accedi per aprire la tua Area guida.');
+    } else openPanel('guida');
+  }
+});
 
 /* ---------- Voce di menu: le mie esperienze ---------- */
 if (vociMenu[3]) {
