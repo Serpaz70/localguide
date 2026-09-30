@@ -60,17 +60,6 @@
     transition: width .2s, height .2s, background .2s;
     mix-blend-mode: multiply;
   }
-  .cursor-ring {
-    position: fixed;
-    width: 36px; height: 36px;
-    border: 1.5px solid var(--terra);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 9998;
-    transform: translate(-50%, -50%);
-    transition: all .15s ease;
-    opacity: 0.6;
-  }
   body:hover .cursor { opacity: 1; }
 
   /* NOISE TEXTURE OVERLAY */
@@ -2867,7 +2856,7 @@
      ============================================ */
   @media (hover: none), (pointer: coarse) {
     body { cursor: auto; }
-    .cursor, .cursor-ring { display: none !important; }
+    .cursor { display: none !important; }
   }
 
   /* Fallback: se il JS non parte, il cursore resta visibile */
@@ -3727,7 +3716,9 @@
     justify-content: center;
     opacity: 0;
     transition: opacity .2s;
-    touch-action: pan-y;
+    /* Il dito muove solo le foto: niente scorrimento né rimbalzo della pagina */
+    touch-action: none;
+    overscroll-behavior: contain;
   }
   .lightbox[hidden] { display: none; }
   .lightbox.aperto { opacity: 1; }
@@ -3777,7 +3768,6 @@
 
 <!-- CURSOR -->
 <div class="cursor" id="cursor"></div>
-<div class="cursor-ring" id="cursorRing"></div>
 
 <!-- NAV -->
 <nav>
@@ -4754,8 +4744,7 @@
   const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   if (!isTouch) document.body.classList.add('custom-cursor');
   const cursor = document.getElementById('cursor');
-  const ring = document.getElementById('cursorRing');
-  let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+  let mouseX = 0, mouseY = 0;
 
   document.addEventListener('mousemove', (e) => {
     mouseX = e.clientX; mouseY = e.clientY;
@@ -4763,27 +4752,15 @@
     cursor.style.top = mouseY + 'px';
   });
 
-  function animateRing() {
-    ringX += (mouseX - ringX) * 0.12;
-    ringY += (mouseY - ringY) * 0.12;
-    ring.style.left = ringX + 'px';
-    ring.style.top = ringY + 'px';
-    requestAnimationFrame(animateRing);
-  }
-  animateRing();
 
   document.querySelectorAll('a, button, .exp-card, .cat-card, .guide-card, .dest-card').forEach(el => {
     el.addEventListener('mouseenter', () => {
       cursor.style.width = '20px';
       cursor.style.height = '20px';
-      ring.style.width = '60px';
-      ring.style.height = '60px';
     });
     el.addEventListener('mouseleave', () => {
       cursor.style.width = '12px';
       cursor.style.height = '12px';
-      ring.style.width = '36px';
-      ring.style.height = '36px';
     });
   });
 
@@ -5125,15 +5102,29 @@
     else if (ev.key === 'ArrowLeft') { ev.stopPropagation(); scorriFoto(-1); }
     else if (ev.key === 'ArrowRight') { ev.stopPropagation(); scorriFoto(1); }
   }, true);
-  // Telefono: scorrimento col dito
+  // Telefono: la foto segue il dito SOLO in orizzontale, poi scatta alla successiva.
+  // preventDefault su touchmove blocca il rimbalzo verticale di Safari su iPhone.
   let tocco = null;
-  lightbox.addEventListener('touchstart', ev => { tocco = ev.touches[0].clientX; }, { passive: true });
+  const imgLb = document.getElementById('lbImg');
+  lightbox.addEventListener('touchstart', ev => {
+    if (ev.touches.length !== 1) return;
+    tocco = ev.touches[0].clientX;
+    imgLb.style.transition = 'none';
+  }, { passive: true });
+  lightbox.addEventListener('touchmove', ev => {
+    ev.preventDefault();
+    if (tocco === null || galleriaCorrente.length < 2) return;
+    imgLb.style.transform = `translateX(${ev.touches[0].clientX - tocco}px)`;
+  }, { passive: false });
   lightbox.addEventListener('touchend', ev => {
     if (tocco === null) return;
     const dx = ev.changedTouches[0].clientX - tocco;
-    if (Math.abs(dx) > 50) scorriFoto(dx < 0 ? 1 : -1);
     tocco = null;
+    imgLb.style.transition = 'transform .2s ease';
+    imgLb.style.transform = '';
+    if (Math.abs(dx) > 50) scorriFoto(dx < 0 ? 1 : -1);
   });
+  lightbox.addEventListener('touchcancel', () => { tocco = null; imgLb.style.transform = ''; });
 
   // Le prossime date disponibili, da toccare (così non si tira a indovinare)
   function disegnaDateRapide(e) {
