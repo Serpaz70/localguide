@@ -3377,16 +3377,20 @@
 
   @media (max-width: 900px) {
     /* Su telefono le foto scorrono di lato invece di sparire */
+    /* Le foto si cambiano col dito in orizzontale; il gesto verticale
+       resta alla pagina (touch-action: pan-y), così non "ballano" */
     .exp-detail-gallery.n2, .exp-detail-gallery.n3 {
       display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
+      overflow: hidden;
       height: 260px;
+      touch-action: pan-y;
+      gap: 0;
     }
     .exp-detail-gallery.n2 > div, .exp-detail-gallery.n3 > div {
       display: block !important;
-      flex: 0 0 88%;
-      scroll-snap-align: start;
+      flex: 0 0 100%;
+      transition: transform .3s ease;
+      will-change: transform;
     }
     .exp-detail-gallery.n2 > div:nth-child(3) { display: none !important; }
     .exp-detail-gallery.n1 { grid-template-rows: 260px; height: 260px; }
@@ -3691,7 +3695,9 @@
   .data-rapida:hover { border-color: var(--terra); color: var(--terra); }
   .data-rapida.on { background: var(--terra); border-color: var(--terra); color: white; }
   /* ===== FOTO A SCHERMO INTERO ===== */
-  .exp-detail-gallery .gal-main { position: relative; }
+  .exp-detail-gallery { position: relative; }
+  /* Niente effetto "elastico" di iPhone sulla scheda: le foto non rimbalzano */
+  .exp-detail-overlay { overscroll-behavior: none; }
   .exp-detail-gallery.senza-foto img { cursor: default; }
   .exp-detail-gallery.senza-foto img:hover { opacity: 1; }
   .gal-conta {
@@ -4150,9 +4156,10 @@
   <div class="exp-detail">
     <button class="exp-detail-close" onclick="closeExpDetail()" aria-label="Chiudi">✕</button>
     <div class="exp-detail-gallery">
-      <div class="gal-main"><img id="dImg0" src="" alt=""><span class="gal-conta" id="dGalConta" hidden></span></div>
+      <div class="gal-main"><img id="dImg0" src="" alt=""></div>
       <div><img id="dImg1" src="" alt=""></div>
       <div><img id="dImg2" src="" alt=""></div>
+      <span class="gal-conta" id="dGalConta" hidden></span>
     </div>
     <div class="exp-detail-body">
       <div class="exp-detail-main">
@@ -5040,9 +5047,9 @@
     const lista = (srcs || []).filter(Boolean).slice(0, 3);
     galleriaCorrente = [...new Set(lista)].filter(src => src !== FOTO_NEUTRA);
     galleriaAlt = alt || '';
-    const conta = document.getElementById('dGalConta');
-    conta.hidden = galleriaCorrente.length < 2;
-    conta.textContent = '📷 ' + galleriaCorrente.length + ' foto';
+    galIdx = 0;
+    posizionaCarosello(0, false);
+    aggiornaContaGalleria();
     document.querySelector('.exp-detail-gallery').classList.toggle('senza-foto', !galleriaCorrente.length);
     const n = Math.max(1, lista.length);
     const gal = document.querySelector('.exp-detail-gallery');
@@ -5055,6 +5062,63 @@
       img.alt = alt || '';
     });
   }
+
+  /* ---------- Carosello foto sul telefono ---------- */
+  let galIdx = 0;
+  const galleriaEl = document.querySelector('.exp-detail-gallery');
+  const telefono = window.matchMedia('(max-width: 900px)');
+  const fotoCarosello = () => [...galleriaEl.children].filter(el => el.tagName === 'DIV').slice(0, galleriaCorrente.length);
+  const caroselloAttivo = () => telefono.matches && galleriaCorrente.length > 1;
+
+  function aggiornaContaGalleria() {
+    const conta = document.getElementById('dGalConta');
+    const n = galleriaCorrente.length;
+    conta.hidden = n < 2;
+    conta.textContent = caroselloAttivo() ? `📷 ${galIdx + 1}/${n}` : `📷 ${n} foto`;
+  }
+  // Sposta le foto; dx = di quanto il dito le sta trascinando in questo momento
+  function posizionaCarosello(dx, animato) {
+    [...galleriaEl.children].forEach(el => {
+      if (el.tagName !== 'DIV') return;
+      el.style.transition = animato ? '' : 'none';
+      el.style.transform = caroselloAttivo() ? `translateX(calc(${-100 * galIdx}% + ${dx}px))` : '';
+    });
+  }
+  telefono.addEventListener('change', () => { galIdx = 0; posizionaCarosello(0, false); aggiornaContaGalleria(); });
+
+  // La direzione si decide al primo movimento del dito e poi non cambia
+  let g0 = null;          // { x, y, asse }
+  galleriaEl.addEventListener('touchstart', ev => {
+    if (!caroselloAttivo() || ev.touches.length !== 1) return;
+    g0 = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, asse: null, dx: 0 };
+  }, { passive: true });
+  galleriaEl.addEventListener('touchmove', ev => {
+    if (!g0) return;
+    const dx = ev.touches[0].clientX - g0.x, dy = ev.touches[0].clientY - g0.y;
+    if (!g0.asse && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) g0.asse = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (g0.asse !== 'x') return;                  // verticale: scorre la pagina, le foto stanno ferme
+    ev.preventDefault();                          // orizzontale: la pagina sta ferma
+    const n = galleriaCorrente.length;
+    // resistenza ai bordi: prima e ultima foto si "tirano" poco
+    g0.dx = ((galIdx === 0 && dx > 0) || (galIdx === n - 1 && dx < 0)) ? dx / 3 : dx;
+    posizionaCarosello(g0.dx, false);
+  }, { passive: false });
+  galleriaEl.addEventListener('touchend', () => {
+    if (!g0) return;
+    const { asse, dx } = g0;
+    g0 = null;
+    if (asse === 'x') {
+      const n = galleriaCorrente.length;
+      if (dx < -50 && galIdx < n - 1) galIdx++;
+      else if (dx > 50 && galIdx > 0) galIdx--;
+      // un trascinamento non deve aprire la foto a schermo intero
+      galleriaEl.dataset.trascinato = '1';
+      setTimeout(() => { delete galleriaEl.dataset.trascinato; }, 350);
+    }
+    posizionaCarosello(0, true);
+    aggiornaContaGalleria();
+  });
+  galleriaEl.addEventListener('touchcancel', () => { g0 = null; posizionaCarosello(0, true); });
 
   /* ---------- Foto a schermo intero ---------- */
   let lbIndice = 0;
@@ -5077,6 +5141,7 @@
   function chiudiFoto() {
     lightbox.classList.remove('aperto');
     lightbox.hidden = true;
+    if (caroselloAttivo()) { galIdx = lbIndice; posizionaCarosello(0, false); aggiornaContaGalleria(); }
   }
   const scorriFoto = passo => {
     const n = galleriaCorrente.length;
@@ -5087,8 +5152,8 @@
   // Clic su una foto della scheda: si apre quella
   document.querySelector('.exp-detail-gallery').addEventListener('click', ev => {
     const img = ev.target.closest('img');
-    if (!img) return;
-    apriFoto(Number(img.id.replace('dImg', '')) || 0);
+    if (!img || galleriaEl.dataset.trascinato) return;
+    apriFoto(caroselloAttivo() ? galIdx : (Number(img.id.replace('dImg', '')) || 0));
   });
   lightbox.addEventListener('click', ev => {
     if (ev.target.closest('.lb-prec')) return scorriFoto(-1);
