@@ -5297,9 +5297,9 @@
   const inItalia = (lat, lng) => lat >= 35.2 && lat <= 47.2 && lng >= 6.5 && lng <= 18.7;
 
   // Mostra l'Italia intera, qualunque sia la larghezza dello schermo
-  function mostraItalia() {
+  function mostraItalia(animato) {
     if (!leafletMap) return;
-    leafletMap.fitBounds(ITALIA, { padding: [10, 10] });
+    leafletMap.fitBounds(ITALIA, { padding: [10, 10], animate: !!animato });
   }
 
   function initMap() {
@@ -7898,7 +7898,15 @@ function aggiornaMappa(vociFiltrate) {
           <div class="lg-popup-footer"><div class="lg-popup-price">€${esc2(v.e.prezzo)}<small> / pers.</small></div></div>
           <button class="lg-popup-btn" type="button">Vedi dettagli →</button>
         </div>`;
-    pop.querySelector('.lg-popup-btn').addEventListener('click', () => openExpDetail(v.id));
+    pop.querySelector('.lg-popup-btn').addEventListener('click', () => {
+      m.closePopup();               // dietro la scheda la mappa torna intanto alla vista generale
+      openExpDetail(v.id);
+    });
+    // Chiuso il riquadro (✕, clic sulla mappa, Esc) si torna alla vista generale.
+    // Se intanto si è aperto il riquadro di un altro pin, si resta lì.
+    m.on('popupclose', () => setTimeout(() => {
+      if (!mappaMarker.some(x => x.isPopupOpen())) vistaGenerale(true);
+    }, 120));
     m.bindPopup(pop, { maxWidth: 260, className: 'lg-leaflet-popup' });
     m.on('click', () => selezionaMappa(i, voci));
     mappaMarker.push(m);
@@ -7906,9 +7914,19 @@ function aggiornaMappa(vociFiltrate) {
 
   // Senza una ricerca per luogo si vede l'Italia intera con tutti i pin;
   // cercando un posto, la mappa si avvicina ai risultati.
-  if (!RICERCA.luogo) mostraItalia();
-  else if (voci.length === 1) leafletMap.setView(voci[0].c, 10);
-  else leafletMap.fitBounds(L.latLngBounds(voci.map(v => v.c)), { padding: [50, 50], maxZoom: 11 });
+  vociInMappa = voci;
+  vistaGenerale(false);
+}
+
+// Vista "di riposo" della mappa: Italia intera, oppure i risultati se si è cercato un luogo
+let vociInMappa = [];
+function vistaGenerale(animato) {
+  const leafletMap = window.leafletMap;
+  if (!leafletMap) return;
+  const voci = vociInMappa;
+  if (!RICERCA.luogo || !voci.length) mostraItalia(animato);
+  else if (voci.length === 1) leafletMap.setView(voci[0].c, 10, { animate: animato });
+  else leafletMap.fitBounds(L.latLngBounds(voci.map(v => v.c)), { padding: [50, 50], maxZoom: 11, animate: animato });
 }
 
 function selezionaMappa(idx, voci) {
