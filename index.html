@@ -3768,6 +3768,33 @@
     .lb-prec { left: 0.5rem; }
     .lb-succ { right: 0.5rem; }
   }
+  /* ===== VERIFICA EMAIL ===== */
+  .verifica-box {
+    background: rgba(196,96,42,0.08);
+    border: 1px solid rgba(196,96,42,0.25);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--charcoal);
+    margin-bottom: 0.8rem;
+  }
+  .verifica-box[hidden] { display: none; }
+  .verifica-box strong { display: block; color: #9B4A1E; margin-bottom: 0.2rem; }
+  .verifica-box b { word-break: break-all; }
+  .verifica-link {
+    display: block;
+    margin-top: 0.45rem;
+    background: none; border: none; padding: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    color: var(--terra);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .user-menu-verifica { font-size: 0.72rem; color: #9B4A1E; margin-top: 0.25rem; }
+  .user-menu-verifica[hidden] { display: none; }
+  .user-menu-verifica a { color: var(--terra); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -3807,6 +3834,9 @@
         <div>
           <div class="user-menu-name" id="userMenuName">Utente</div>
           <div class="user-menu-email" id="userMenuEmail">—</div>
+          <div class="user-menu-verifica" id="userMenuVerifica" hidden>
+            ⚠️ Email da confermare · <a href="#" id="menuReinvia">invia di nuovo</a>
+          </div>
         </div>
       </div>
       <a href="#" class="user-menu-item">🎫 Le mie prenotazioni</a>
@@ -4238,6 +4268,11 @@
           </div>
           <div class="date-rapide" id="bookingDateRapide"></div>
           <div class="booking-posti" id="bookingPosti" aria-live="polite"></div>
+          <div class="verifica-box" id="verificaBox" hidden>
+            <strong>Conferma la tua email per prenotare.</strong>
+            Ti abbiamo scritto a <b id="verificaEmail"></b>: apri il link nell'email, poi torna qui e premi Prenota.
+            <button type="button" class="verifica-link" id="verificaReinvia">Non è arrivata? Inviala di nuovo</button>
+          </div>
           <div class="booking-breakdown">
             <div class="booking-line"><span id="bookingLineLabel"></span><span id="bookingLineTotal"></span></div>
             <div class="booking-line total"><span>Totale</span><span id="bookingGrandTotal"></span></div>
@@ -5257,12 +5292,31 @@
   // ===== LEAFLET MAP =====
   let leafletMap = null;
 
+  // LocalGuide è solo per l'Italia: riquadro che la contiene tutta (isole comprese)
+  const ITALIA = [[35.4, 6.6], [47.1, 18.6]];
+  const inItalia = (lat, lng) => lat >= 35.2 && lat <= 47.2 && lng >= 6.5 && lng <= 18.7;
+
+  // Mostra l'Italia intera, qualunque sia la larghezza dello schermo
+  function mostraItalia() {
+    if (!leafletMap) return;
+    leafletMap.fitBounds(ITALIA, { padding: [10, 10] });
+  }
+
   function initMap() {
     leafletMap = L.map('leaflet-map', {
       center: [42.5, 12.8],
       zoom: 6,
+      zoomSnap: 0.25,            // inquadratura più precisa dell'Italia
       zoomControl: true,
-      scrollWheelZoom: false
+      scrollWheelZoom: false,
+      maxBounds: L.latLngBounds(ITALIA).pad(0.25),   // non si va a spasso per il mondo
+      maxBoundsViscosity: 0.9
+    });
+    mostraItalia();
+    // Zoom minimo = Italia intera: allontanandosi di più non si vede altro
+    leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA) - 0.25));
+    window.addEventListener('resize', () => {
+      leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA) - 0.25));
     });
 
     // Tile layer OpenStreetMap — nessuna API key richiesta
@@ -5359,6 +5413,8 @@ import {
   onAuthStateChanged,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
+  reload,
   setPersistence,
   browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -5464,8 +5520,14 @@ document.getElementById('btnSignup').addEventListener('click', async () => {
       displayName: nome,
       photoURL: avatarIniziali(nome, email)
     });
-    showAuthAlert('Account creato! Benvenuto su LocalGuide, ' + nome.split(' ')[0] + '.', 'success');
-    setTimeout(closeModal, 1400);
+    // Email di conferma: senza, non si può prenotare (lo controllano anche le regole)
+    let inviata = true;
+    try { await sendEmailVerification(cred.user); } catch (err) { inviata = false; console.warn(err); }
+    aggiornaStatoVerifica();
+    showAuthAlert(inviata
+      ? `Account creato! Ti abbiamo mandato un'email a ${email}: apri il link per confermare l'indirizzo, poi potrai prenotare. Controlla anche lo spam.`
+      : 'Account creato! Non sono riuscito a mandarti l\'email di conferma: la puoi richiedere dal menu del tuo account.', 'success');
+    setTimeout(closeModal, 6000);
   } catch (e) {
     showAuthAlert(traduciErrore(e));
   } finally {
@@ -5549,6 +5611,57 @@ document.getElementById('btnLogout').addEventListener('click', async e => {
   document.getElementById('userMenu').classList.remove('open');
 });
 
+/* ---------- VERIFICA EMAIL ----------
+   Chi entra con Google ha già l'email verificata. Chi si registra con
+   email e password deve cliccare il link ricevuto prima di prenotare. */
+function daVerificare() {
+  const u = auth.currentUser;
+  return !!(u && !u.emailVerified);
+}
+function aggiornaStatoVerifica() {
+  const serve = daVerificare();
+  document.getElementById('userMenuVerifica').hidden = !serve;
+  document.getElementById('verificaBox').hidden = !serve;
+  if (auth.currentUser) document.getElementById('verificaEmail').textContent = auth.currentUser.email || '';
+}
+// Ricontrolla con Firebase (l'utente può aver cliccato il link in un'altra scheda)
+async function emailVerificata() {
+  const u = auth.currentUser;
+  if (!u) return false;
+  if (u.emailVerified) return true;
+  try { await reload(u); } catch (e) { console.warn('reload', e); }
+  if (auth.currentUser && auth.currentUser.emailVerified) {
+    // il "permesso" che leggono le regole va rinnovato, altrimenti dice ancora "non verificata"
+    try { await auth.currentUser.getIdToken(true); } catch {}
+    aggiornaStatoVerifica();
+    return true;
+  }
+  return false;
+}
+window.emailVerificata = emailVerificata;
+async function reinviaVerifica() {
+  const u = auth.currentUser;
+  if (!u) return;
+  try {
+    await sendEmailVerification(u);
+    toast('Email inviata a ' + u.email + '. Controlla anche lo spam.', true);
+  } catch (e) {
+    toast(e.code === 'auth/too-many-requests'
+      ? 'Ne hai già chieste diverse: aspetta qualche minuto e riprova.'
+      : 'Non riesco a inviarla. Riprova tra poco.');
+  }
+}
+document.getElementById('verificaReinvia').addEventListener('click', reinviaVerifica);
+document.getElementById('menuReinvia').addEventListener('click', e => { e.preventDefault(); reinviaVerifica(); });
+// Tornando sul sito dopo aver aperto l'email, la conferma si vede da sola
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !daVerificare()) return;
+  if (await emailVerificata()) {
+    toast('Email confermata: ora puoi prenotare.', true);
+    if (window.aggiornaPosti && document.getElementById('expDetailOverlay').classList.contains('active')) window.aggiornaPosti();
+  }
+});
+
 /* ---------- STATO SESSIONE ---------- */
 onAuthStateChanged(auth, user => {
   const guest = document.getElementById('navGuest');
@@ -5561,6 +5674,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('userName').textContent       = nome.split(' ')[0];
     document.getElementById('userMenuName').textContent   = nome;
     document.getElementById('userMenuEmail').textContent  = user.email;
+    aggiornaStatoVerifica();
     document.getElementById('userAvatar').src             = avatar;
     document.getElementById('userMenuAvatar').src         = avatar;
 
@@ -5579,6 +5693,7 @@ onAuthStateChanged(auth, user => {
   } else {
     guest.style.display = 'flex';
     zona.style.display  = 'none';
+    aggiornaStatoVerifica();
     preferitiLocali.clear();
     aggiornaCuori();
     closePanel();
@@ -5718,7 +5833,9 @@ window.aggiornaPosti = async function () {
   const ora  = document.getElementById('bookingTime').value;
 
   const uid = auth.currentUser ? auth.currentUser.uid : null;
+  aggiornaStatoVerifica();
   if (uid && e.autoreUid === uid) {
+    document.getElementById('verificaBox').hidden = true;
     box.className = 'booking-posti';
     box.textContent = 'Questa esperienza è tua: le prenotazioni le vedi nell\'Area guida.';
     btn.disabled = true; btn.textContent = 'È la tua esperienza';
@@ -5790,6 +5907,12 @@ window.richiediLogin = async () => {
 
   if (!e) return false;
   if (e.autoreUid === user.uid) { toast('Non puoi prenotare la tua esperienza.'); return false; }
+  if (!(await emailVerificata())) {
+    aggiornaStatoVerifica();
+    document.getElementById('verificaBox').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    toast('Prima conferma la tua email: trovi il link nella posta.');
+    return false;
+  }
   if (!data) { toast('Scegli una data per continuare.'); return false; }
   if (!orario) { toast('Scegli un orario per continuare.'); return false; }
   if (data < oggiISO()) { toast('La data scelta è già passata.'); return false; }
@@ -6627,6 +6750,11 @@ document.getElementById('btnVicino').addEventListener('click', () => {
   btn.textContent = 'Cerco la tua posizione…';
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude: lat, longitude: lng } = pos.coords;
+    if (!inItalia(lat, lng)) {
+      ripristina();
+      toast('Sembri fuori dall\'Italia: LocalGuide propone esperienze solo in Italia.');
+      return;
+    }
     if (window.segnaPosizione) window.segnaPosizione(lat, lng);
     RICERCA.testo = 'Vicino a te';
     RICERCA.luogo = { nome: 'Vicino a te', vicino: true, lat, lng, bbox: null, punteggio: 100 };
@@ -7254,6 +7382,9 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
   if (!geo) geo = await geocodifica(citta);
 
   setLoading(btn, false);
+  if (!geo || !inItalia(geo.lat, geo.lng)) {
+    return avvisoPub(`Non trovo «${citta}» in Italia. Scrivi il nome del paese o della città e scegli dalla lista che compare: LocalGuide è solo per esperienze in Italia.`);
+  }
   setLoading(btn, true, inModifica ? 'Salvo le modifiche...' : 'Pubblicazione...');
   const copertina = fotoScelte[0] ? fotoScelte[0].piccola : '';
   const extra = fotoScelte.slice(1).map(v => v.grande);
@@ -7375,7 +7506,7 @@ const COORD_NOTE = {
   bari:[41.1171,16.8719], catania:[37.5079,15.083], verona:[45.4384,10.9916]
 };
 
-const CACHE_GEO = 'lg_geo_v3';   // v3: le voci includono riquadro, nome breve e punteggio
+const CACHE_GEO = 'lg_geo_v4';   // v4: solo luoghi in Italia
 const leggiCache = () => { try { return JSON.parse(localStorage.getItem(CACHE_GEO)) || {}; } catch { return {}; } };
 const scriviCache = c => { try { localStorage.setItem(CACHE_GEO, JSON.stringify(c)); } catch {} };
 
@@ -7410,7 +7541,8 @@ const CHIAVI_SCARTATE = new Set(['highway', 'building', 'amenity', 'shop', 'rail
 async function cercaPhoton(testo, { limite = 6, signal } = {}) {
   const url = 'https://photon.komoot.io/api/?lang=default'
     + '&limit=' + Math.min(limite + 8, 20)          // ne chiediamo di più: molti li scartiamo
-    + '&lat=42.5&lon=12.5&zoom=6&location_bias_scale=0.3'   // preferenza per l'Italia, senza escludere il resto
+    + '&lat=42.5&lon=12.5&zoom=6&location_bias_scale=0.3'
+    + '&bbox=6.6,35.4,18.6,47.1'                 // solo dentro il riquadro dell'Italia...
     + '&q=' + encodeURIComponent(testo);
   const r = await fetch(url, { signal });
   if (!r.ok) return [];
@@ -7441,10 +7573,14 @@ async function cercaPhoton(testo, { limite = 6, signal } = {}) {
         icona: ICONE_LUOGO[p.osm_value] || ICONE_LUOGO[p.type] || '📍',
         lat: Number(lat), lng: Number(lng),
         bbox,
-        punteggio: punteggioLuogo(p)
+        punteggio: punteggioLuogo(p),
+        inItalia: p.countrycode
+          ? ['IT', 'SM', 'VA'].includes(String(p.countrycode).toUpperCase())
+          : /^(italia|italy|san marino|città del vaticano)$/i.test(p.country || '')
       };
       // Stesso luogo due volte (il punto e il confine comunale): una sola voce,
       // con il punteggio più alto e il riquadro se uno dei due lo ha
+      if (!inItalia(Number(lat), Number(lng))) return;
       const k = normalizza(nome + '|' + contesto);
       const gia = perChiave.get(k);
       if (!gia) perChiave.set(k, voce);
@@ -7454,7 +7590,9 @@ async function cercaPhoton(testo, { limite = 6, signal } = {}) {
       }
     });
 
-  let voci = [...perChiave.values()];
+  // ...e poi solo Italia davvero: il riquadro include anche Corsica, Ticino, Malta.
+  // San Marino e Vaticano stanno dentro l'Italia e restano.
+  let voci = [...perChiave.values()].filter(v => v.inItalia);
 
   // Se c'è almeno un paese o una città, frazioni, quartieri e località spariscono
   if (voci.some(v => v.punteggio >= 60)) voci = voci.filter(v => v.punteggio >= 50);
@@ -7718,7 +7856,8 @@ function aggiornaMappa(vociFiltrate) {
     // Se si è cercato un luogo, la mappa ci va comunque
     const L0 = RICERCA.luogo;
     if (L0 && L0.bbox) leafletMap.fitBounds([[L0.bbox[0], L0.bbox[1]], [L0.bbox[2], L0.bbox[3]]]);
-    else if (L0) leafletMap.setView([L0.lat, L0.lng], 10);
+    else if (L0 && L0.lat != null) leafletMap.setView([L0.lat, L0.lng], 10);
+    else mostraItalia();
     return;
   }
 
@@ -7765,7 +7904,10 @@ function aggiornaMappa(vociFiltrate) {
     mappaMarker.push(m);
   });
 
-  if (voci.length === 1) leafletMap.setView(voci[0].c, 10);
+  // Senza una ricerca per luogo si vede l'Italia intera con tutti i pin;
+  // cercando un posto, la mappa si avvicina ai risultati.
+  if (!RICERCA.luogo) mostraItalia();
+  else if (voci.length === 1) leafletMap.setView(voci[0].c, 10);
   else leafletMap.fitBounds(L.latLngBounds(voci.map(v => v.c)), { padding: [50, 50], maxZoom: 11 });
 }
 
