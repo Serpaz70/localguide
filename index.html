@@ -20,6 +20,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Raggruppa i pin vicini in un cerchio col numero -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
   :root {
     --cream: #F5F0E8;
@@ -3795,6 +3798,25 @@
   .user-menu-verifica { font-size: 0.72rem; color: #9B4A1E; margin-top: 0.25rem; }
   .user-menu-verifica[hidden] { display: none; }
   .user-menu-verifica a { color: var(--terra); font-weight: 600; }
+  /* ===== GRUPPI DI PIN SULLA MAPPA ===== */
+  .lg-cluster-wrap { background: none; border: none; }
+  .lg-cluster {
+    border-radius: 50%;
+    background: var(--terra);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 3px solid white;
+    box-shadow: 0 0 0 6px rgba(196,96,42,0.22), 0 6px 16px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .lg-cluster:hover { transform: scale(1.08); }
+  .exp-detail-gallery .in-arrivo img { cursor: progress; }
 </style>
 </head>
 <body>
@@ -4705,6 +4727,16 @@
      ============================================================ */
   const CATALOGO = {};          // riempito da caricaEsperienze()
   let espCorrente = null;
+  // Foto non ancora arrivata: sfondo sabbia con un cerchio che gira
+  const FOTO_ATTESA = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
+       <rect width="600" height="400" fill="#E8DCC8"/>
+       <circle cx="300" cy="200" r="20" fill="none" stroke="#C4602A" stroke-width="3"
+               stroke-linecap="round" stroke-dasharray="90 40">
+         <animateTransform attributeName="transform" type="rotate"
+           from="0 300 200" to="360 300 200" dur="0.9s" repeatCount="indefinite"/>
+       </circle>
+     </svg>`);
   const FOTO_NEUTRA = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
        <rect width="600" height="400" fill="#E8DCC8"/>
@@ -4995,8 +5027,10 @@
     const set = (el, val) => { const n = document.getElementById(el); if (n) n.textContent = val; };
 
     // Subito la copertina; le altre foto arrivano dal database se ci sono
-    mostraGalleria(e.imgTutte || e.img, e.titolo);
-    if (!e.imgTutte && e.fotoExtra > 0 && window.caricaGalleria) window.caricaGalleria(id);
+    // Le foto extra si scaricano adesso, ma il carosello sa già quante sono:
+    // si può scorrere subito, con un segnaposto finché non arrivano
+    mostraGalleria(e.imgTutte || e.img, e.titolo, { inArrivo: e.imgTutte ? 0 : (e.fotoExtra || 0) });
+    if (!e.imgTutte && (e.fotoExtra > 0 || e.copertinaGrande) && window.caricaGalleria) window.caricaGalleria(id);
 
     set('dLuogo', '📍 ' + e.luogo);
     set('dTitolo', e.titolo);
@@ -5078,24 +5112,33 @@
   // Una, due o tre foto: la galleria cambia forma invece di ripetere la stessa immagine
   let galleriaCorrente = [];     // foto vere dell'esperienza aperta (senza segnaposto)
   let galleriaAlt = '';
-  function mostraGalleria(srcs, alt) {
-    const lista = (srcs || []).filter(Boolean).slice(0, 3);
-    galleriaCorrente = [...new Set(lista)].filter(src => src !== FOTO_NEUTRA);
+  // opz.inArrivo: quante foto extra stanno ancora arrivando (null in galleriaCorrente)
+  // opz.mantieni: non riportare il carosello alla prima foto (aggiornamento in corsa)
+  function mostraGalleria(srcs, alt, opz = {}) {
+    const reali = [...new Set((srcs || []).filter(Boolean))].filter(src => src !== FOTO_NEUTRA).slice(0, 3);
+    const attese = reali.length ? Math.max(0, Math.min(3 - reali.length, opz.inArrivo || 0)) : 0;
+    galleriaCorrente = [...reali, ...Array(attese).fill(null)];
     galleriaAlt = alt || '';
-    galIdx = 0;
-    posizionaCarosello(0, false);
-    aggiornaContaGalleria();
-    document.querySelector('.exp-detail-gallery').classList.toggle('senza-foto', !galleriaCorrente.length);
-    const n = Math.max(1, lista.length);
+    if (!opz.mantieni) galIdx = 0;
+    galIdx = Math.min(galIdx, Math.max(0, galleriaCorrente.length - 1));
     const gal = document.querySelector('.exp-detail-gallery');
     gal.classList.remove('n1', 'n2', 'n3');
-    gal.classList.add('n' + n);
+    gal.classList.add('n' + Math.max(1, galleriaCorrente.length));
+    gal.classList.toggle('senza-foto', !reali.length);
     [0, 1, 2].forEach(i => {
       const img = document.getElementById('dImg' + i);
       if (!img) return;
-      img.src = lista[i] || lista[0] || FOTO_NEUTRA;
+      const inArrivo = i < galleriaCorrente.length && !galleriaCorrente[i];
+      img.src = galleriaCorrente[i] || (inArrivo ? FOTO_ATTESA : (reali[0] || FOTO_NEUTRA));
       img.alt = alt || '';
+      img.parentElement.classList.toggle('in-arrivo', inArrivo);
     });
+    posizionaCarosello(0, false);
+    aggiornaContaGalleria();
+    if (typeof lightbox !== 'undefined' && !lightbox.hidden) {
+      lbIndice = Math.min(lbIndice, galleriaCorrente.length - 1);
+      mostraFoto();
+    }
   }
 
   /* ---------- Carosello foto sul telefono ---------- */
@@ -5168,7 +5211,7 @@
   function mostraFoto() {
     const n = galleriaCorrente.length;
     const img = document.getElementById('lbImg');
-    img.src = galleriaCorrente[lbIndice];
+    img.src = galleriaCorrente[lbIndice] || FOTO_ATTESA;
     img.alt = galleriaAlt + (n > 1 ? ` — foto ${lbIndice + 1} di ${n}` : '');
     document.getElementById('lbConta').textContent = n > 1 ? `${lbIndice + 1} / ${n}` : '';
     lightbox.querySelectorAll('.lb-freccia').forEach(b => { b.hidden = n < 2; });
@@ -5306,7 +5349,7 @@
     leafletMap = L.map('leaflet-map', {
       center: [42.5, 12.8],
       zoom: 6,
-      zoomSnap: 0.25,            // inquadratura più precisa dell'Italia
+      zoomSnap: 1,               // zoom interi: i gruppi di pin non funzionano bene con quelli frazionari
       zoomControl: true,
       scrollWheelZoom: false,
       maxBounds: L.latLngBounds(ITALIA).pad(0.25),   // non si va a spasso per il mondo
@@ -5314,9 +5357,9 @@
     });
     mostraItalia();
     // Zoom minimo = Italia intera: allontanandosi di più non si vede altro
-    leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA) - 0.25));
+    leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA)));
     window.addEventListener('resize', () => {
-      leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA) - 0.25));
+      leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA)));
     });
 
     // Tile layer OpenStreetMap — nessuna API key richiesta
@@ -6320,6 +6363,8 @@ async function caricaEsperienze() {
         lat: numero(v.lat, -90, 90), lng: numero(v.lng, -180, 180),
         img: [foto],
         fotoExtra: numero(v.fotoExtra, 0, 2) || 0,
+        // true = in "foto" c'è solo una miniatura leggera; la copertina grande è in foto/f0
+        copertinaGrande: v.copertinaGrande === true,
         orari: lista(v.orari, 8).length ? lista(v.orari, 8) : ['10:00'],
         giorni: Array.isArray(v.giorni) ? v.giorni.filter(n => Number.isInteger(n) && n >= 0 && n <= 6) : [],
         dal: /^\d{4}-\d{2}-\d{2}$/.test(v.dal || '') ? v.dal : '',
@@ -7175,7 +7220,7 @@ window.apriPubblica = async (id) => {
     }
     // Foto attuali: copertina + eventuali extra (lette solo ora)
     if (e.img[0] && e.img[0] !== FOTO_NEUTRA) {
-      if (e.fotoExtra > 0 && !e.imgTutte && window.caricaGalleria) await window.caricaGalleria(id);
+      if ((e.fotoExtra > 0 || e.copertinaGrande) && !e.imgTutte && window.caricaGalleria) await window.caricaGalleria(id);
       const tutte = (e.imgTutte || [e.img[0]]).filter(src => src && src !== FOTO_NEUTRA);
       fotoScelte = tutte.slice(0, MAX_FOTO).map(src => ({ id: ++fotoSeq, stato: 'pronta', piccola: src, grande: src }));
       disegnaFoto();
@@ -7260,6 +7305,7 @@ async function aggiungiFoto(files) {
     disegnaFoto();
     try {
       const img = await leggiImmagine(file);
+      voce.mini    = comprimi(img, 600, 35 * 1024);     // per schede, mappa, liste
       voce.piccola = comprimi(img, 1000, 110 * 1024);
       voce.grande  = comprimi(img, 1600, 250 * 1024);
       voce.stato = 'pronta';
@@ -7271,6 +7317,15 @@ async function aggiungiFoto(files) {
     }
     disegnaFoto();
   }
+}
+
+async function miniaturaDa(src) {
+  return new Promise(ok => {
+    const img = new Image();
+    img.onload = () => { try { ok(comprimi(img, 600, 35 * 1024)); } catch { ok(''); } };  // https di altri siti: niente
+    img.onerror = () => ok('');
+    img.src = src;
+  });
 }
 
 function disegnaFoto() {
@@ -7316,21 +7371,40 @@ zonaFoto.addEventListener('drop', e => aggiungiFoto(e.dataTransfer.files));
 disegnaFoto();
 
 /* Foto extra: lette solo quando si apre il dettaglio */
-window.caricaGalleria = async id => {
+// Una sola richiesta per esperienza: se parte in anticipo (passaggio del mouse,
+// tocco sulla scheda), all'apertura si riusa quella già in corso.
+window.caricaGalleria = id => {
   const e = CATALOGO[id];
-  if (!e) return;
-  try {
-    const snap = await getDocs(collection(db, 'esperienze', id, 'foto'));
-    const extra = snap.docs.map(d => d.data())
-      .sort((a, b) => (a.ordine || 0) - (b.ordine || 0))
-      .map(d => urlSicura(d.src, true))
-      .filter(Boolean);
-    e.imgTutte = [e.img[0], ...extra];
-    if (espCorrente === id) mostraGalleria(e.imgTutte, e.titolo);
-  } catch (err) {
-    console.warn('Foto extra non disponibili:', err);
-  }
+  if (!e || !(e.fotoExtra > 0 || e.copertinaGrande) || e.imgTutte) return Promise.resolve();
+  if (e._galleria) return e._galleria;
+  e._galleria = (async () => {
+    try {
+      const snap = await getDocs(collection(db, 'esperienze', id, 'foto'));
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.ordine || 0) - (b.ordine || 0));
+      const grande = e.copertinaGrande ? urlSicura((docs.find(d => d.id === 'f0') || {}).src, true) : '';
+      const extra = docs.filter(d => d.id !== 'f0').map(d => urlSicura(d.src, true)).filter(Boolean);
+      // la miniatura resta in vista finché non arriva la copertina grande
+      e.imgTutte = [grande || e.img[0], ...extra];
+      if (espCorrente === id) mostraGalleria(e.imgTutte, e.titolo, { mantieni: true });
+    } catch (err) {
+      console.warn('Foto extra non disponibili:', err);
+      e._galleria = null;                       // si potrà riprovare
+      if (espCorrente === id) mostraGalleria([e.img[0]], e.titolo, { mantieni: true });
+    }
+  })();
+  return e._galleria;
 };
+
+// Scaricamento anticipato: appena il mouse passa su una scheda o il dito la tocca
+const anticipaFoto = ev => {
+  const el = ev.target.closest && ev.target.closest('[data-exp-id],[data-apri]');
+  const id = el && (el.dataset.expId || el.dataset.apri);
+  if (id && CATALOGO[id]) window.caricaGalleria(id);
+};
+document.addEventListener('pointerover', anticipaFoto, { passive: true });
+document.addEventListener('touchstart', anticipaFoto, { passive: true });
+document.addEventListener('focusin', anticipaFoto);
 
 document.getElementById('pDescrizione').addEventListener('input', e => {
   document.getElementById('pConta').textContent = e.target.value.length;
@@ -7386,7 +7460,12 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
     return avvisoPub(`Non trovo «${citta}» in Italia. Scrivi il nome del paese o della città e scegli dalla lista che compare: LocalGuide è solo per esperienze in Italia.`);
   }
   setLoading(btn, true, inModifica ? 'Salvo le modifiche...' : 'Pubblicazione...');
-  const copertina = fotoScelte[0] ? fotoScelte[0].piccola : '';
+  const primo = fotoScelte[0];
+  const copertina = primo ? primo.piccola : '';
+  // La scheda tiene solo una miniatura leggera; la copertina vera va in foto/f0
+  let mini = primo ? (primo.mini || '') : '';
+  if (primo && !mini && /^data:image\//.test(copertina)) mini = await miniaturaDa(copertina);
+  const copertinaGrande = !!(primo && mini && /^data:image\/jpeg/.test(mini));
   const extra = fotoScelte.slice(1).map(v => v.grande);
   const campi = {
     lat: geo ? geo.lat : null,
@@ -7399,7 +7478,8 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
     dal, al,
     date: quando.modo === 'date' ? quando.date.filter(d => d >= oggiISO()).slice(0, 60) : [],
     incluso: val('pIncluso').split(',').map(o => o.trim()).filter(Boolean).slice(0, 12),
-    foto: copertina,
+    foto: copertinaGrande ? mini : copertina,
+    copertinaGrande,
     fotoExtra: extra.length
   };
 
@@ -7420,10 +7500,16 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
     }
 
     // Le altre foto, una per documento (ognuna può pesare fino a ~250 KB)
-    if (extra.length || inModifica) {
+    if (extra.length || copertinaGrande || inModifica) {
       setLoading(btn, false);
       setLoading(btn, true, 'Carico le foto...');
       try {
+        if (copertinaGrande) {
+          await setDoc(doc(db, 'esperienze', rif.id, 'foto', 'f0'),
+            { src: copertina, ordine: 0, creato: serverTimestamp() });
+        } else if (inModifica) {
+          await deleteDoc(doc(db, 'esperienze', rif.id, 'foto', 'f0')).catch(() => {});
+        }
         for (let i = 0; i < extra.length; i++) {
           await setDoc(doc(db, 'esperienze', rif.id, 'foto', 'f' + (i + 1)),
             { src: extra[i], ordine: i + 1, creato: serverTimestamp() });
@@ -7435,7 +7521,8 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
       } catch (e) {
         console.error('Foto extra:', e);
         fotoNonSalvate = true;
-        try { await updateDoc(rif, { fotoExtra: 0 }); } catch {}
+        // senza la copertina grande la scheda torna a usare la foto normale
+        try { await updateDoc(rif, { fotoExtra: 0, copertinaGrande: false, foto: copertina }); } catch {}
       }
     }
 
@@ -7833,11 +7920,34 @@ async function completaCoordinateMancanti() {
 
 /* ---------- Mappa alimentata dai risultati della ricerca ---------- */
 let mappaMarker = [];
+// Gruppo che raccoglie i pin vicini. Se l'estensione non si carica, i pin
+// vanno direttamente sulla mappa come prima (niente di rotto, solo niente gruppi).
+let gruppoPin = null;
+function contenitorePin(leafletMap) {
+  if (gruppoPin || typeof L.markerClusterGroup !== 'function') return gruppoPin || leafletMap;
+  gruppoPin = L.markerClusterGroup({
+    maxClusterRadius: 45,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: true,
+    iconCreateFunction: c => {
+      const n = c.getChildCount();
+      const lato = n < 10 ? 44 : n < 50 ? 52 : 60;
+      return L.divIcon({
+        html: `<div class="lg-cluster" style="width:${lato}px;height:${lato}px"><span>${n}</span></div>`,
+        className: 'lg-cluster-wrap',
+        iconSize: [lato, lato]
+      });
+    }
+  });
+  leafletMap.addLayer(gruppoPin);
+  return gruppoPin;
+}
 
 function aggiornaMappa(vociFiltrate) {
   const leafletMap = window.leafletMap;
   if (!leafletMap) return;
-  mappaMarker.forEach(m => leafletMap.removeLayer(m));
+  if (gruppoPin) gruppoPin.clearLayers();
+  else mappaMarker.forEach(m => leafletMap.removeLayer(m));
   mappaMarker = [];
 
   const voci = (vociFiltrate || Object.entries(CATALOGO))
@@ -7883,7 +7993,8 @@ function aggiornaMappa(vociFiltrate) {
              </div>`,
       className: '', iconSize: [54, 62], iconAnchor: [27, 62], popupAnchor: [0, -66]
     });
-    const m = L.marker(v.c, { icon: icona }).addTo(leafletMap);
+    const m = L.marker(v.c, { icon: icona });
+    contenitorePin(leafletMap).addLayer(m);
     // SICUREZZA: niente onclick con l'id dentro l'HTML. Il popup riceve un
     // elemento DOM (non una stringa, che Leaflet ricostruirebbe perdendo il
     // collegamento) e il bottone riceve l'id come valore JavaScript.
@@ -7904,6 +8015,7 @@ function aggiornaMappa(vociFiltrate) {
     });
     // Chiuso il riquadro (✕, clic sulla mappa, Esc) si torna alla vista generale.
     // Se intanto si è aperto il riquadro di un altro pin, si resta lì.
+    m.on('popupopen', () => window.caricaGalleria(v.id));
     m.on('popupclose', () => setTimeout(() => {
       if (!mappaMarker.some(x => x.isPopupOpen())) vistaGenerale(true);
     }, 120));
@@ -7942,8 +8054,11 @@ function selezionaMappa(idx, voci) {
     const el = document.getElementById('lmarker-' + i);
     if (el) el.classList.toggle('lg-marker-active', i === idx);
   });
-  leafletMap.setView(voci[idx].c, 10, { animate: true });
-  mappaMarker[idx].openPopup();
+  const m = mappaMarker[idx];
+  leafletMap.setView(voci[idx].c, 10, { animate: false });
+  // se a quello zoom il pin è ancora dentro un gruppo, il gruppo si apre da solo
+  if (gruppoPin) gruppoPin.zoomToShowLayer(m, () => m.openPopup());
+  else m.openPopup();
 }
 
 /* ---------- Link del footer ---------- */
