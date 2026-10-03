@@ -2735,6 +2735,7 @@
       max-height: 260px;
     }
     .map-area { height: 360px; }
+    .lg-popup-img { height: 96px; }
 
     /* Modal dettaglio esperienza */
     .exp-detail-overlay { padding: 0; }
@@ -7954,6 +7955,11 @@ function contenitorePin(leafletMap) {
   gruppoPin = L.markerClusterGroup({
     maxClusterRadius: 45,
     showCoverageOnHover: false,
+    // Di serie i pin fuori dal riquadro visibile vengono tolti dalla mappa.
+    // Sul telefono, quando il riquadro di un pin si apre, la mappa scorre per
+    // farlo stare tutto e il pin finisce appena fuori: veniva tolto e il
+    // riquadro si chiudeva da solo. Con al massimo 200 pin non serve toglierli.
+    removeOutsideVisibleBounds: false,
     spiderfyOnMaxZoom: true,
     iconCreateFunction: c => {
       const n = c.getChildCount();
@@ -8043,10 +8049,17 @@ function aggiornaMappa(vociFiltrate) {
     // Se intanto si è aperto il riquadro di un altro pin, si resta lì.
     m.on('popupopen', () => window.caricaGalleria(v.id));
     m.on('popupclose', () => setTimeout(() => {
-      if (!mappaMarker.some(x => x.isPopupOpen())) vistaGenerale(true);
+      if (!selezioneInCorso && !mappaMarker.some(x => x.isPopupOpen())) vistaGenerale(true);
     }, 120));
     m.bindPopup(pop, { maxWidth: 260, className: 'lg-leaflet-popup' });
-    m.on('click', () => selezionaMappa(i, voci));
+    // Clic sul pin: da lontano ci si avvicina (come prima); già vicini
+    // il riquadro lo apre Leaflet e qui si aggiorna solo l'evidenziazione.
+    // (Prima la mappa si allontanava sempre a zoom 10: il pin rientrava in un
+    // gruppo e il riquadro appena aperto si richiudeva.)
+    m.on('click', () => {
+      if (leafletMap.getZoom() < 10) selezionaMappa(i, voci);
+      else evidenziaMappa(i);
+    });
     mappaMarker.push(m);
   });
 
@@ -8067,8 +8080,10 @@ function vistaGenerale(animato) {
   else leafletMap.fitBounds(L.latLngBounds(voci.map(v => v.c)), { padding: [50, 50], maxZoom: 11, animate: animato });
 }
 
-function selezionaMappa(idx, voci) {
-  const leafletMap = window.leafletMap;
+// Vero mentre la mappa si sposta per aprire un riquadro scelto dall'elenco:
+// in quel momento nessun riquadro è aperto, ma non si deve tornare alla vista generale.
+let selezioneInCorso = false;
+function evidenziaMappa(idx) {
   document.querySelectorAll('#mapExpList .map-exp-item').forEach((el, i) => {
     el.classList.toggle('selected', i === idx);
     if (i === idx) {
@@ -8080,11 +8095,25 @@ function selezionaMappa(idx, voci) {
     const el = document.getElementById('lmarker-' + i);
     if (el) el.classList.toggle('lg-marker-active', i === idx);
   });
+}
+
+function selezionaMappa(idx, voci) {
+  const leafletMap = window.leafletMap;
+  evidenziaMappa(idx);
   const m = mappaMarker[idx];
-  leafletMap.setView(voci[idx].c, 10, { animate: false });
+  // Telefono: l'elenco sta sopra la mappa, si porta la mappa in vista
+  if (window.innerWidth <= 900) {
+    const area = document.querySelector('.map-area');
+    if (area) area.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // Ci si avvicina solo se si è lontani: mai allontanarsi da dove si è già
+  if (leafletMap.getZoom() < 10) leafletMap.setView(voci[idx].c, 10, { animate: false });
   // se a quello zoom il pin è ancora dentro un gruppo, il gruppo si apre da solo
-  if (gruppoPin) gruppoPin.zoomToShowLayer(m, () => m.openPopup());
-  else m.openPopup();
+  if (gruppoPin) {
+    selezioneInCorso = true;
+    const fine = setTimeout(() => { selezioneInCorso = false; }, 3000);
+    gruppoPin.zoomToShowLayer(m, () => { clearTimeout(fine); m.openPopup(); selezioneInCorso = false; });
+  } else m.openPopup();
 }
 
 /* ---------- Link del footer ---------- */
