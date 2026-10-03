@@ -161,14 +161,14 @@
 
   /* HERO */
   .hero {
-    min-height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     overflow: hidden;
   }
 
   .hero-left {
-    padding: 12rem 4rem 6rem;
+    padding: 10rem 4rem 4.5rem;
+    max-width: 1100px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -883,6 +883,17 @@
     height: 250px;
   }
   .dest-card:first-child { grid-row: span 2; height: 100%; }
+  /* Quante destinazioni ci sono davvero decide la forma della griglia */
+  .dest-grid.n4 .dest-card:last-child { grid-column: span 2; }
+  .dest-grid.n3 { grid-template-columns: 2fr 1fr; }
+  .dest-grid.n2 { grid-template-columns: 1fr 1fr; }
+  .dest-grid.n2 .dest-card { grid-row: auto; height: 320px; }
+  .dest-card { border: none; padding: 0; text-align: left; font: inherit; color: inherit; background: var(--sand); display: block; width: 100%; }
+  .dest-card:focus-visible { outline: 3px solid var(--terra); outline-offset: 3px; }
+  .dest-card.senza-foto { background: linear-gradient(135deg, var(--moss), var(--terra)); }
+  .section-header-lato { display: flex; align-items: center; gap: 1.4rem; flex-wrap: wrap; }
+  #contatoreEsperienze { color: var(--warm-gray); }
+  #contatoreEsperienze:hover { gap: 0.4rem; }
 
   .dest-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
   .dest-card:hover img { transform: scale(1.06); }
@@ -1821,6 +1832,16 @@
     transition: transform .2s;
   }
   .exp-detail-close:hover { transform: scale(1.1); }
+  .detail-condividi {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    margin: -0.4rem 0 1.4rem;
+    padding: 0.45rem 0.95rem;
+    border: 1px solid var(--sand); border-radius: 100px;
+    background: white; color: var(--charcoal);
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500;
+    cursor: pointer; transition: border-color .2s, color .2s;
+  }
+  .detail-condividi:hover { border-color: var(--terra); color: var(--terra); }
 
   .exp-detail-gallery {
     display: grid;
@@ -2693,8 +2714,12 @@
     .app-banner { grid-template-columns: 1fr; gap: 3rem; }
     .app-mockup { height: auto; padding-top: 1rem; }
 
-    .dest-grid { grid-template-columns: repeat(2, 1fr); }
+    .dest-grid, .dest-grid.n3, .dest-grid.n2 { grid-template-columns: repeat(2, 1fr); }
     .dest-card:first-child { grid-row: auto; height: 250px; }
+    .dest-grid.n4 .dest-card:last-child { grid-column: auto; }
+    /* numero dispari: la prima prende tutta la riga, niente buchi */
+    .dest-grid.n3 .dest-card:first-child, .dest-grid.n5 .dest-card:first-child { grid-column: 1 / -1; }
+    .dest-grid.n2 .dest-card { height: 250px; }
     .dest-card:first-child .dest-name { font-size: 1.6rem; }
 
     .test-grid { grid-template-columns: 1fr; }
@@ -2783,8 +2808,8 @@
 
     .guides-grid { grid-template-columns: 1fr; }
     .trending-grid { grid-template-columns: 1fr; gap: 1rem; }
-    .dest-grid { grid-template-columns: 1fr; }
-    .dest-card, .dest-card:first-child { height: 200px; }
+    .dest-grid, .dest-grid.n3, .dest-grid.n2 { grid-template-columns: 1fr; }
+    .dest-card, .dest-card:first-child, .dest-grid.n2 .dest-card { height: 200px; }
 
     /* Filtri scorrevoli in orizzontale */
     .filter-bar {
@@ -3817,6 +3842,17 @@
   }
   .lg-cluster:hover { transform: scale(1.08); }
   .exp-detail-gallery .in-arrivo img { cursor: progress; }
+  /* Parte alta senza foto: su schermi larghi il titolo si stende su due righe */
+  @media (min-width: 901px) {
+    .hero-title { max-width: 980px; }
+    .hero-title br { display: none; }
+    .hero-sub { max-width: 620px; }
+    .hero-stats { margin-top: 3rem; }
+  }
+  .mostra-altre { display: flex; justify-content: center; margin-top: 2rem; }
+  .mostra-altre:empty { display: none; }
+  .mostra-altre button { cursor: pointer; background: transparent; font-family: 'DM Sans', sans-serif; }
+  .mostra-altre-tot { color: var(--warm-gray); font-size: 0.85em; }
 </style>
 </head>
 <body>
@@ -3831,9 +3867,9 @@
     <span></span><span></span><span></span>
   </button>
   <ul class="nav-links" id="navLinks">
-    <li><a href="#esperienze">Esperienze</a></li>
+    <li><a href="#mappa">Esperienze</a></li>
     <li><a href="#guide">Guide</a></li>
-    <li><a href="#destinazioni">Destinazioni</a></li>
+    <li id="footerDestinazioni" hidden><a href="#destinazioni">Destinazioni</a></li>
     <li><a href="#come-funziona">Come funziona</a></li>
   </ul>
 
@@ -3886,7 +3922,7 @@
       Non le solite visite guidate. Persone vere che condividono la loro città, la loro cucina, la loro passione. Un'esperienza che ricorderai per sempre.
     </p>
     <div class="hero-actions">
-      <a href="#esperienze" class="btn-large">Scopri le esperienze</a>
+      <a href="#mappa" class="btn-large">Scopri le esperienze</a>
       <a href="#come-funziona" class="btn-outline-large">Come funziona</a>
     </div>
     <div class="hero-stats">
@@ -3901,26 +3937,6 @@
       <div class="stat-item">
         <div class="stat-number" id="statCitta">0</div>
         <div class="stat-label">Città</div>
-      </div>
-    </div>
-  </div>
-  <div class="hero-right">
-    <div class="hero-grid">
-      <div class="hero-img" style="grid-column: 1; grid-row: 1;">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80" alt="Cucina locale">
-        <div class="hero-img-overlay">🍝 Cucina napoletana</div>
-      </div>
-      <div class="hero-img" style="grid-column: 2; grid-row: 1;">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Trekking">
-        <div class="hero-img-overlay">🏔️ Dolomiti segrete</div>
-      </div>
-      <div class="hero-img" style="grid-column: 1; grid-row: 2;">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=600&q=80" alt="Arte di strada">
-        <div class="hero-img-overlay">🎨 Street art Roma</div>
-      </div>
-      <div class="hero-img" style="grid-column: 2; grid-row: 2;">
-        <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80" alt="Degustazione vini">
-        <div class="hero-img-overlay">🍷 Vini toscani</div>
       </div>
     </div>
   </div>
@@ -3980,73 +3996,48 @@
   </div>
 </section>
 
-<!-- CATEGORIES -->
-<section class="categories" id="esperienze">
+<!-- MAP SECTION -->
+<section class="map-section" id="mappa">
   <div class="section-header reveal">
-    <h2 class="section-title">Esplora per<br><em>categoria</em></h2>
-    <a href="#tutte" class="section-link" id="linkVediTutte">Vedi tutte →</a>
+    <h2 class="section-title">Esplora sulla<br><em>mappa</em></h2>
+    <span class="section-link" id="mappaNota"></span>
   </div>
-  <div class="cat-grid reveal">
-    <div class="cat-card" data-cat="cucina">
-      <div class="cat-img">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80" alt="Cucina">
+  <div class="map-wrapper reveal">
+    <div class="map-sidebar">
+      <div class="map-sidebar-header">
+        <div class="map-sidebar-title">Esperienze sulla mappa</div>
+        <div class="map-sidebar-sub" id="mapSidebarSub">Nessuna esperienza</div>
+        <button class="btn-vicino" id="btnVicino" type="button">📍 Vicino a me</button>
       </div>
-      <div class="cat-body">
-        <div class="cat-icon">🍳</div>
-        <div class="cat-name">Cucina locale</div>
-        <div class="cat-count" data-conta="">—</div>
-      </div>
+      <div class="map-exp-list" id="mapExpList"></div>
     </div>
-    <div class="cat-card" data-cat="arte">
-      <div class="cat-img">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=400&q=80" alt="Arte">
-      </div>
-      <div class="cat-body">
-        <div class="cat-icon">🎨</div>
-        <div class="cat-name">Arte e cultura</div>
-        <div class="cat-count" data-conta="">—</div>
-      </div>
-    </div>
-    <div class="cat-card" data-cat="avventura">
-      <div class="cat-img">
-        <img src="https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?w=400&q=80" alt="Avventura">
-      </div>
-      <div class="cat-body">
-        <div class="cat-icon">🏔️</div>
-        <div class="cat-name">Avventura</div>
-        <div class="cat-count" data-conta="">—</div>
-      </div>
-    </div>
-    <div class="cat-card" data-cat="vino">
-      <div class="cat-img">
-        <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80" alt="Gastronomia">
-      </div>
-      <div class="cat-body">
-        <div class="cat-icon">🍷</div>
-        <div class="cat-name">Enogastronomia</div>
-        <div class="cat-count" data-conta="">—</div>
-      </div>
-    </div>
-    <div class="cat-card" data-cat="musica">
-      <div class="cat-img">
-        <img loading="lazy" src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&q=80" alt="Musica">
-      </div>
-      <div class="cat-body">
-        <div class="cat-icon">🎵</div>
-        <div class="cat-name">Musica live</div>
-        <div class="cat-count" data-conta="">—</div>
-      </div>
+    <div class="map-area">
+      <div id="leaflet-map" style="width:100%;height:100%;"></div>
     </div>
   </div>
 </section>
 
-<!-- ESPERIENZE IN EVIDENZA -->
-<section class="featured">
+<!-- TUTTE LE ESPERIENZE -->
+<section class="trending" id="tutte">
   <div class="section-header reveal">
-    <h2 class="section-title">Esperienze<br><em>in evidenza</em></h2>
-    <a href="#" class="section-link" id="linkPubblica1">Pubblica la tua →</a>
+    <h2 class="section-title">Tutte le<br><em>esperienze</em></h2>
+    <div class="section-header-lato">
+      <span class="section-link" id="contatoreEsperienze"></span>
+      <a href="#" class="section-link" id="linkPubblica1">Pubblica la tua →</a>
+    </div>
   </div>
-  <div class="exp-grid" id="grigliaEvidenza"></div>
+  <div class="filter-bar reveal" id="filterBar">
+    <button class="filter-btn active" data-cat="all">Tutte</button>
+    <button class="filter-btn" data-cat="cucina">🍳 Cucina</button>
+    <button class="filter-btn" data-cat="arte">🎨 Arte</button>
+    <button class="filter-btn" data-cat="avventura">🏔️ Avventura</button>
+    <button class="filter-btn" data-cat="vino">🍷 Vino &amp; Cibo</button>
+    <button class="filter-btn" data-cat="musica">🎵 Musica</button>
+    <button class="filter-btn" data-cat="tour">🗺️ Tour a piedi</button>
+  </div>
+  <div class="risultati-info" id="risultatiInfo" aria-live="polite"></div>
+  <div class="trending-grid" id="grigliaTutte"></div>
+  <div class="mostra-altre" id="mostraAltre"></div>
 </section>
 
 <!-- GUIDE -->
@@ -4059,48 +4050,12 @@
 </section>
 
 <!-- DESTINATIONS -->
-<section class="destinations" id="destinazioni">
+<section class="destinations" id="destinazioni" hidden>
   <div class="section-header reveal">
     <h2 class="section-title">Destinazioni<br><em>popolari</em></h2>
     <a href="#mappa" class="section-link">Esplora sulla mappa →</a>
   </div>
-  <div class="dest-grid reveal">
-    <div class="dest-card">
-      <img loading="lazy" src="https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800&q=80" alt="Roma">
-      <div class="dest-overlay">
-        <div class="dest-name" data-citta="Roma">Roma</div>
-        <div class="dest-count">—</div>
-      </div>
-    </div>
-    <div class="dest-card">
-      <img loading="lazy" src="https://images.unsplash.com/photo-1513581166391-887a96ddeafd?w=600&q=80" alt="Venezia">
-      <div class="dest-overlay">
-        <div class="dest-name" data-citta="Venezia">Venezia</div>
-        <div class="dest-count">—</div>
-      </div>
-    </div>
-    <div class="dest-card">
-      <img loading="lazy" src="https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=600&q=80" alt="Sicilia">
-      <div class="dest-overlay">
-        <div class="dest-name" data-citta="Sicilia">Sicilia</div>
-        <div class="dest-count">—</div>
-      </div>
-    </div>
-    <div class="dest-card">
-      <img loading="lazy" src="https://images.unsplash.com/photo-1541332417810-3a47d1a62413?w=600&q=80" alt="Milano">
-      <div class="dest-overlay">
-        <div class="dest-name" data-citta="Milano">Milano</div>
-        <div class="dest-count">—</div>
-      </div>
-    </div>
-    <div class="dest-card">
-      <img src="https://images.unsplash.com/photo-1499678329028-101435549a4e?w=600&q=80" alt="Amalfi">
-      <div class="dest-overlay">
-        <div class="dest-name" data-citta="Costa Amalfitana">Costa Amalfitana</div>
-        <div class="dest-count">—</div>
-      </div>
-    </div>
-  </div>
+  <div class="dest-grid reveal" id="grigliaDestinazioni"></div>
 </section>
 
 <!-- COME FUNZIONA -->
@@ -4217,6 +4172,10 @@
       <div class="exp-detail-main">
         <div class="exp-detail-location" id="dLuogo"></div>
         <h2 class="exp-detail-title" id="dTitolo"></h2>
+        <button type="button" class="detail-condividi" id="dCondividi">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Condividi
+        </button>
         <div class="exp-detail-meta">
           <div class="exp-detail-meta-item">
             <span class="exp-detail-meta-label">Durata</span>
@@ -4306,46 +4265,6 @@
     </div>
   </div>
 </div>
-
-<!-- TUTTE LE ESPERIENZE -->
-<section class="trending" id="tutte">
-  <div class="section-header reveal">
-    <h2 class="section-title">Tutte le<br><em>esperienze</em></h2>
-    <span class="section-link" id="contatoreEsperienze"></span>
-  </div>
-  <div class="filter-bar reveal" id="filterBar">
-    <button class="filter-btn active" data-cat="all">Tutte</button>
-    <button class="filter-btn" data-cat="cucina">🍳 Cucina</button>
-    <button class="filter-btn" data-cat="arte">🎨 Arte</button>
-    <button class="filter-btn" data-cat="avventura">🏔️ Avventura</button>
-    <button class="filter-btn" data-cat="vino">🍷 Vino &amp; Cibo</button>
-    <button class="filter-btn" data-cat="musica">🎵 Musica</button>
-    <button class="filter-btn" data-cat="tour">🗺️ Tour a piedi</button>
-  </div>
-  <div class="risultati-info" id="risultatiInfo" aria-live="polite"></div>
-  <div class="trending-grid" id="grigliaTutte"></div>
-</section>
-
-<!-- MAP SECTION -->
-<section class="map-section" id="mappa">
-  <div class="section-header reveal">
-    <h2 class="section-title">Esplora sulla<br><em>mappa</em></h2>
-    <span class="section-link" id="mappaNota"></span>
-  </div>
-  <div class="map-wrapper reveal">
-    <div class="map-sidebar">
-      <div class="map-sidebar-header">
-        <div class="map-sidebar-title">Esperienze sulla mappa</div>
-        <div class="map-sidebar-sub" id="mapSidebarSub">Nessuna esperienza</div>
-        <button class="btn-vicino" id="btnVicino" type="button">📍 Vicino a me</button>
-      </div>
-      <div class="map-exp-list" id="mapExpList"></div>
-    </div>
-    <div class="map-area">
-      <div id="leaflet-map" style="width:100%;height:100%;"></div>
-    </div>
-  </div>
-</section>
 
 <!-- APP BANNER -->
 <section class="app-banner">
@@ -5023,6 +4942,7 @@
     const e = CATALOGO[id];
     if (!e) return;                 // esperienza rimossa o non ancora caricata
     espCorrente = id;
+    scriviLink(id);
 
     const set = (el, val) => { const n = document.getElementById(el); if (n) n.textContent = val; };
 
@@ -5289,10 +5209,79 @@
   });
 
   function closeExpDetail() {
+    const overlay = document.getElementById('expDetailOverlay');
+    const eraAperto = overlay.classList.contains('active');
     if (!lightbox.hidden) chiudiFoto();
-    document.getElementById('expDetailOverlay').classList.remove('active');
+    overlay.classList.remove('active');
     document.body.style.overflow = '';
+    // Toglie #esperienza/... dall'indirizzo. Se l'abbiamo aggiunto noi aprendo
+    // la scheda, si torna indietro: così il tasto Indietro non la riapre.
+    if (eraAperto && idDaLink()) {
+      if (linkAggiunto) { linkAggiunto = false; history.back(); }
+      else history.replaceState(history.state, '', location.pathname + location.search);
+    }
   }
+
+  /* ---------- LINK DIRETTO A UN'ESPERIENZA ----------
+     Ogni scheda ha il suo indirizzo: .../#esperienza/<id>
+     Aprirla lo scrive nella barra, il tasto Indietro la chiude,
+     incollarlo in un'altra finestra la apre appena il catalogo è pronto. */
+  const PREFISSO_LINK = '#esperienza/';
+  let linkAggiunto = false;
+  function idDaLink() {
+    const h = location.hash;
+    if (!h.startsWith(PREFISSO_LINK)) return '';
+    try { return decodeURIComponent(h.slice(PREFISSO_LINK.length)); } catch { return ''; }
+  }
+  function linkEsperienza(id) {
+    return location.href.split('#')[0] + PREFISSO_LINK + encodeURIComponent(id);
+  }
+  function scriviLink(id) {
+    if (idDaLink() === id) return;
+    if (idDaLink()) history.replaceState(history.state, '', PREFISSO_LINK + encodeURIComponent(id));
+    else { history.pushState(history.state, '', PREFISSO_LINK + encodeURIComponent(id)); linkAggiunto = true; }
+  }
+  // Chiamata una volta, quando le esperienze sono arrivate
+  window.apriDaLink = function () {
+    const id = idDaLink();
+    if (!id) return;
+    if (CATALOGO[id]) { linkAggiunto = false; openExpDetail(id); }
+    else {
+      history.replaceState(history.state, '', location.pathname + location.search);
+      toast('Questa esperienza non è più disponibile');
+    }
+  };
+  window.addEventListener('popstate', () => {
+    const id = idDaLink();
+    const aperto = document.getElementById('expDetailOverlay').classList.contains('active');
+    if (id && CATALOGO[id]) {
+      if (!aperto || espCorrente !== id) { linkAggiunto = false; openExpDetail(id); }
+    } else if (aperto) {
+      linkAggiunto = false;
+      closeExpDetail();
+    }
+  });
+
+  // Telefono: il menu di condivisione del sistema (WhatsApp, Messaggi...).
+  // Computer: copia il link, che è quello che serve quasi sempre.
+  async function condividiEsperienza(id) {
+    const e = CATALOGO[id];
+    if (!e) return;
+    const url = linkEsperienza(id);
+    const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    if (touch && navigator.share) {
+      try { await navigator.share({ title: e.titolo, text: e.titolo + ' · ' + e.citta, url }); return; }
+      catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copiato: incollalo dove vuoi', true);
+    } catch {
+      window.prompt('Copia questo link:', url);
+    }
+  }
+  window.condividiEsperienza = condividiEsperienza;
+  document.getElementById('dCondividi').addEventListener('click', () => condividiEsperienza(espCorrente));
   document.getElementById('expDetailOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeExpDetail();
   });
@@ -5340,9 +5329,15 @@
   const inItalia = (lat, lng) => lat >= 35.2 && lat <= 47.2 && lng >= 6.5 && lng <= 18.7;
 
   // Mostra l'Italia intera, qualunque sia la larghezza dello schermo
+  // Lo zoom (intero) più vicino a cui l'Italia si vede tutta: è anche lo zoom minimo
+  function zoomItalia() {
+    return Math.max(4, leafletMap.getBoundsZoom(ITALIA, false, L.point(20, 20)));
+  }
   function mostraItalia(animato) {
     if (!leafletMap) return;
-    leafletMap.fitBounds(ITALIA, { padding: [10, 10], animate: !!animato });
+    const z = zoomItalia();
+    leafletMap.setMinZoom(z);
+    leafletMap.setView(L.latLngBounds(ITALIA).getCenter(), z, { animate: !!animato });
   }
 
   function initMap() {
@@ -5355,11 +5350,13 @@
       maxBounds: L.latLngBounds(ITALIA).pad(0.25),   // non si va a spasso per il mondo
       maxBoundsViscosity: 0.9
     });
+    // Si parte già allo zoom giusto (niente passaggi intermedi sotto il minimo:
+    // i gruppi di pin andrebbero in errore se arrivassero in quel momento)
     mostraItalia();
-    // Zoom minimo = Italia intera: allontanandosi di più non si vede altro
-    leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA)));
     window.addEventListener('resize', () => {
-      leafletMap.setMinZoom(Math.max(4, leafletMap.getBoundsZoom(ITALIA)));
+      const z = zoomItalia();
+      leafletMap.setMinZoom(z);
+      if (leafletMap.getZoom() < z) leafletMap.setZoom(z, { animate: false });
     });
 
     // Tile layer OpenStreetMap — nessuna API key richiesta
@@ -6254,6 +6251,7 @@ async function htmlAreaGuida(user) {
         </div>
         <div class="ag-azioni">
           <button class="ag-btn" data-apri="${esc(id)}">Vedi</button>
+          <button class="ag-btn" data-condividi="${esc(id)}">Condividi</button>
           <button class="ag-btn" data-modifica="${esc(id)}">Modifica</button>
           <button class="ag-btn danger" data-elimina="${esc(id)}">Elimina</button>
         </div>
@@ -6273,7 +6271,7 @@ document.getElementById('tabGuida').onclick        = () => caricaTab('guida');
 
 // Azioni dentro il pannello (delegate: il contenuto viene ridisegnato)
 document.getElementById('panelBody').addEventListener('click', async ev => {
-  const t = ev.target.closest('[data-annulla],[data-apri],[data-modifica],[data-azione]');
+  const t = ev.target.closest('[data-annulla],[data-apri],[data-modifica],[data-azione],[data-condividi]');
   if (!t || t.hasAttribute('data-elimina')) return;   // "Elimina" lo gestisce il click globale
   ev.preventDefault();
   if (t.dataset.annulla) {
@@ -6283,6 +6281,8 @@ document.getElementById('panelBody').addEventListener('click', async ev => {
   } else if (t.dataset.apri) {
     closePanel();                     // il dettaglio sta sotto il pannello
     openExpDetail(t.dataset.apri);
+  } else if (t.dataset.condividi) {
+    window.condividiEsperienza(t.dataset.condividi);
   } else if (t.dataset.modifica) {
     apriPubblica(t.dataset.modifica);
   } else if (t.dataset.azione === 'pubblica') {
@@ -6321,6 +6321,7 @@ const spiegaDb = e => (ERRORI_DB[e?.code] || 'Errore imprevisto') + '  [' + (e?.
 const refEsperienze = () => collection(db, 'esperienze');
 
 /* ---------- Caricamento ---------- */
+let linkIniziale = false;
 async function caricaEsperienze() {
   try {
     const snap = await getDocs(query(refEsperienze(), orderBy('creato', 'desc'), limit(200)));
@@ -6376,6 +6377,8 @@ async function caricaEsperienze() {
       };
     });
     renderTutto();
+    // Arrivati da un link diretto: si apre quella scheda (solo la prima volta)
+    if (!linkIniziale) { linkIniziale = true; window.apriDaLink && window.apriDaLink(); }
     completaCoordinateMancanti();
   } catch (e) {
     console.error('Caricamento esperienze:', e);
@@ -6450,6 +6453,10 @@ function cardPiccola(id, e) {
         <div class="exp-location">📍 ${esc2(e.citta)}</div>
         <h3 class="exp-title">${esc2(e.titolo)}</h3>
         <div class="exp-host"><span class="host-name">Con <strong>${esc2(e.guida)}</strong></span></div>
+        <div class="exp-meta">
+          <div class="exp-meta-item">⏱ ${esc2(e.durata)}</div>
+          <div class="exp-meta-item">👥 ${esc2(e.gruppo)}</div>
+        </div>
         <div class="exp-footer">
           <div class="exp-price">€${e.prezzo} <span>/ persona</span></div>
         </div>
@@ -6483,19 +6490,6 @@ function cardTrending(id, e, mia, distanza) {
         <button class="card-azione danger" data-elimina="${id}">Elimina</button>
       </div>` : ''}
     </div>`;
-}
-
-/* ---------- Rendering delle sezioni ---------- */
-function renderEvidenza() {
-  const box = document.getElementById('grigliaEvidenza');
-  const voci = Object.entries(CATALOGO).slice(0, 4);
-  if (!voci.length) {
-    box.innerHTML = statoVuoto('🧭', 'Ancora nessuna esperienza',
-      'Questo spazio aspetta la prima guida. Se conosci la tua città, tocca a te.', true);
-    return;
-  }
-  box.innerHTML = voci.map(([id, e], i) =>
-    i === 0 ? cardGrande(id, e) : cardPiccola(id, e)).join('');
 }
 
 /* ============================================================
@@ -6632,8 +6626,15 @@ function renderInfoRisultati(esito) {
   box.classList.add('show');
 }
 
+// Quante schede mostrare: 8 all'inizio, +8 a ogni "Mostra altre".
+// Una nuova ricerca riparte da 8. La mappa mostra sempre tutti i risultati.
+const PASSO_SCHEDE = 8;
+let limiteSchede = PASSO_SCHEDE;
+
 window.renderTutte = function () {
   const box = document.getElementById('grigliaTutte');
+  const altre = document.getElementById('mostraAltre');
+  altre.innerHTML = '';
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   const tot = Object.keys(CATALOGO).length;
   const esito = filtraCatalogo();
@@ -6661,10 +6662,26 @@ window.renderTutte = function () {
     }
     return;
   }
-  box.innerHTML = voci.map(([id, e], i) =>
+  box.innerHTML = voci.slice(0, limiteSchede).map(([id, e], i) =>
     cardTrending(id, e, uid && e.autoreUid === uid,
       esito.modo === 'vicine' ? esito.distanze[i] : null)).join('');
+  const restano = voci.length - limiteSchede;
+  if (restano > 0) {
+    altre.innerHTML = `<button type="button" class="btn-outline-large" id="btnMostraAltre">
+      ${restano <= PASSO_SCHEDE
+        ? (restano === 1 ? 'Mostra l\'ultima' : `Mostra le ultime ${restano}`)
+        : `Mostra altre ${PASSO_SCHEDE} <span class="mostra-altre-tot">· ne restano ${restano}</span>`}</button>`;
+  }
 };
+document.getElementById('mostraAltre').addEventListener('click', e => {
+  if (!e.target.closest('#btnMostraAltre')) return;
+  const prima = document.querySelectorAll('#grigliaTutte .trending-card').length;
+  limiteSchede += PASSO_SCHEDE;
+  window.renderTutte();
+  // porta lo sguardo sulla prima scheda nuova
+  const nuova = document.querySelectorAll('#grigliaTutte .trending-card')[prima];
+  if (nuova) nuova.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
 
 /* ---------- Comandi della ricerca ---------- */
 const campoDove    = document.getElementById('sDove');
@@ -6687,7 +6704,7 @@ function sincronizzaCampi() {
 }
 
 function vaiAiRisultati() {
-  const sezione = document.getElementById('tutte');
+  const sezione = document.getElementById('mappa');
   const nav = document.querySelector('nav');
   const y = sezione.getBoundingClientRect().top + window.scrollY - (nav ? nav.offsetHeight : 0) - 12;
   window.scrollTo({ top: y, behavior: 'smooth' });
@@ -6717,6 +6734,7 @@ function nomeCorrisponde(nome, testo) {
 // Unico punto d'ingresso: decide se il testo è un luogo o parole chiave, poi ridisegna
 let ricercaSeq = 0;
 async function eseguiRicerca(opzioni = {}) {
+  limiteSchede = PASSO_SCHEDE;        // nuova ricerca: si riparte dalle prime 8
   const seq = ++ricercaSeq;
   const t = RICERCA.testo.trim();
   RICERCA.inAttesa = false;
@@ -6832,35 +6850,20 @@ grigliaGuide.addEventListener('keydown', e => {
   if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); apriGuida(c); }
 });
 
-// Card categoria → filtra e mostra i risultati
-document.querySelectorAll('.cat-card').forEach(c => {
-  c.addEventListener('click', () => {
-    RICERCA.cat = c.dataset.cat;
-    eseguiRicerca({ scorri: true });
-  });
+// Destinazioni: le genera renderDestinazioni(), il click è delegato
+document.getElementById('grigliaDestinazioni').addEventListener('click', e => {
+  const c = e.target.closest('.dest-card[data-citta]');
+  if (!c) return;
+  RICERCA.testo = c.dataset.citta; RICERCA.luogo = null;
+  eseguiRicerca({ scorri: true });
 });
 
-// Card destinazione → cerca quel luogo
-document.querySelectorAll('.dest-card').forEach(c => {
-  const nome = c.querySelector('.dest-name')?.dataset.citta;
-  if (!nome) return;
-  c.setAttribute('role', 'button');
-  c.setAttribute('tabindex', '0');
-  const vai = () => {
-    RICERCA.testo = nome; RICERCA.luogo = null;
-    eseguiRicerca({ scorri: true });
-  };
-  c.addEventListener('click', vai);
-  c.addEventListener('keydown', e => { if (e.key === 'Enter') vai(); });
-});
-
-// "Vedi tutte" → nessun filtro
-document.getElementById('linkVediTutte').addEventListener('click', e => {
-  e.preventDefault();
+// Nessun filtro: tutte le esperienze
+function mostraTutte() {
   RICERCA.testo = ''; RICERCA.luogo = null; RICERCA.cat = 'all'; RICERCA.persone = 0; RICERCA.data = '';
   RICERCA.guida = null;
   eseguiRicerca({ scorri: true });
-});
+}
 
 // Suggerimenti sotto la barra: nati dai dati veri, non da una lista inventata
 function renderSuggerimenti() {
@@ -6932,26 +6935,48 @@ function renderConteggi() {
   document.getElementById('statEsperienze').textContent = tutte.length;
   document.getElementById('statGuide').textContent = new Set(tutte.map(e => e.autoreUid)).size;
   document.getElementById('statCitta').textContent = new Set(tutte.map(e => e.citta.toLowerCase())).size;
+}
 
-  document.querySelectorAll('.cat-card').forEach(c => {
-    const n = tutte.filter(e => e.categoria === c.dataset.cat).length;
-    const el = c.querySelector('.cat-count');
-    if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
+/* ---------- Destinazioni: nascono dalle esperienze pubblicate ----------
+   Le città con più esperienze (fino a 5), con la foto di una di quelle.
+   Con meno di due città la sezione non si mostra: sarebbe un doppione. */
+function renderDestinazioni() {
+  const sez = document.getElementById('destinazioni');
+  const box = document.getElementById('grigliaDestinazioni');
+  const perCitta = {};
+  Object.values(CATALOGO).forEach(e => {
+    if (!e.citta || e.citta === 'Luogo non indicato') return;
+    const k = normalizza(e.citta);
+    const c = perCitta[k] = perCitta[k] || { nome: e.citta, n: 0, foto: '' };
+    c.n++;
+    // CATALOGO è dalla più recente: tiene la prima foto vera che trova
+    if (!c.foto && e.img[0] && e.img[0] !== FOTO_NEUTRA) c.foto = e.img[0];
   });
-
-  document.querySelectorAll('.dest-name').forEach(d => {
-    const cerca = normalizza(d.dataset.citta);
-    const n = tutte.filter(e => stessoLuogo(e, cerca)).length;
-    const el = d.parentElement.querySelector('.dest-count');
-    if (el) el.textContent = n ? `${n} ${n === 1 ? 'esperienza' : 'esperienze'}` : 'Nessuna ancora';
-  });
+  const citta = Object.values(perCitta)
+    .sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome, 'it'))
+    .slice(0, 5);
+  const mostra = citta.length >= 2;
+  sez.hidden = !mostra;
+  const voceFooter = document.getElementById('footerDestinazioni');
+  if (voceFooter) voceFooter.hidden = !mostra;
+  if (!mostra) { box.innerHTML = ''; return; }
+  box.className = 'dest-grid reveal visible n' + citta.length;
+  box.innerHTML = citta.map(c => `
+    <button type="button" class="dest-card${c.foto ? '' : ' senza-foto'}" data-citta="${esc2(c.nome)}"
+            aria-label="Esperienze a ${esc2(c.nome)}">
+      ${c.foto ? `<img loading="lazy" src="${esc2(c.foto)}" alt="">` : ''}
+      <div class="dest-overlay">
+        <div class="dest-name">${esc2(c.nome)}</div>
+        <div class="dest-count">${c.n} ${c.n === 1 ? 'esperienza' : 'esperienze'}</div>
+      </div>
+    </button>`).join('');
 }
 
 function renderTutto() {
-  renderEvidenza();
   window.renderTutte();
   renderGuide();
   renderConteggi();
+  renderDestinazioni();
   renderSuggerimenti();
   aggiornaCuori();
 }
@@ -7924,6 +7949,7 @@ let mappaMarker = [];
 // vanno direttamente sulla mappa come prima (niente di rotto, solo niente gruppi).
 let gruppoPin = null;
 function contenitorePin(leafletMap) {
+  if (leafletMap.getZoom() < leafletMap.getMinZoom()) leafletMap.setZoom(leafletMap.getMinZoom(), { animate: false });
   if (gruppoPin || typeof L.markerClusterGroup !== 'function') return gruppoPin || leafletMap;
   gruppoPin = L.markerClusterGroup({
     maxClusterRadius: 45,
@@ -8071,7 +8097,7 @@ document.querySelector('footer').addEventListener('click', ev => {
     RICERCA.cat = a.dataset.footerCat;
     eseguiRicerca({ scorri: true });
   } else if (az === 'tutte') {
-    document.getElementById('linkVediTutte').click();
+    mostraTutte();
   } else if (az === 'pubblica') {
     apriPubblica();
   } else if (az === 'guida') {
