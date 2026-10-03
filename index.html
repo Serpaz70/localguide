@@ -3870,6 +3870,27 @@
     .hero-stats { margin-top: 3rem; }
   }
   .mostra-altre { display: flex; justify-content: center; margin-top: 2rem; }
+  /* In evidenza: 6 schede, 3 per riga; sul telefono una fila da scorrere */
+  #grigliaEvidenza { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .torna-home {
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500;
+    background: none; border: none; padding: 0.4rem 0; margin-bottom: 1.2rem;
+    color: var(--terra); cursor: pointer;
+  }
+  .torna-home:hover { text-decoration: underline; }
+  @media (max-width: 640px) {
+    #grigliaEvidenza {
+      display: flex; gap: 0.9rem;
+      overflow-x: auto; scroll-snap-type: x mandatory;
+      overscroll-behavior-x: contain; scrollbar-width: none;
+      margin: 0 -1.2rem; padding: 0.2rem 1.2rem 0.8rem;
+      scroll-padding-left: 1.2rem;
+    }
+    #grigliaEvidenza::-webkit-scrollbar { display: none; }
+    #grigliaEvidenza > .trending-card { flex: 0 0 82%; scroll-snap-align: start; }
+    #grigliaEvidenza > :not(.trending-card) { flex: 1 0 100%; }
+    .mostra-altre .btn-outline-large { width: 100%; text-align: center; }
+  }
   .mostra-altre:empty { display: none; }
   .mostra-altre button { cursor: pointer; background: transparent; font-family: 'DM Sans', sans-serif; }
   .mostra-altre-tot { color: var(--warm-gray); font-size: 0.85em; }
@@ -3890,7 +3911,7 @@
   <ul class="nav-links" id="navLinks">
     <li><a href="#mappa">Esperienze</a></li>
     <li><a href="#guide">Guide</a></li>
-    <li id="footerDestinazioni" hidden><a href="#destinazioni">Destinazioni</a></li>
+    <li id="navDestinazioni" hidden><a href="#destinazioni">Destinazioni</a></li>
     <li><a href="#come-funziona">Come funziona</a></li>
   </ul>
 
@@ -4038,16 +4059,29 @@
   </div>
 </section>
 
-<!-- TUTTE LE ESPERIENZE -->
-<section class="trending" id="tutte">
+<!-- IN EVIDENZA: in home al posto dell'elenco completo -->
+<section class="trending evidenza" id="evidenza">
   <div class="section-header reveal">
-    <h2 class="section-title">Tutte le<br><em>esperienze</em></h2>
+    <h2 class="section-title">Esperienze<br><em>in evidenza</em></h2>
     <div class="section-header-lato">
-      <span class="section-link" id="contatoreEsperienze"></span>
+      <a href="#" class="section-link" id="linkVediTutte">Vedi tutte →</a>
       <a href="#" class="section-link" id="linkPubblica1">Pubblica la tua →</a>
     </div>
   </div>
-  <div class="filter-bar reveal" id="filterBar">
+  <div class="trending-grid" id="grigliaEvidenza"></div>
+  <div class="mostra-altre"><button type="button" class="btn-outline-large" id="btnVediTutte" hidden>Vedi tutte le esperienze →</button></div>
+</section>
+
+<!-- RISULTATI / TUTTE LE ESPERIENZE: compare solo cercando o con "Vedi tutte" -->
+<section class="trending" id="tutte" hidden>
+  <button type="button" class="torna-home" id="btnTornaHome">← Torna alla home</button>
+  <div class="section-header">
+    <h2 class="section-title" id="titoloTutte">Tutte le<br><em>esperienze</em></h2>
+    <div class="section-header-lato">
+      <span class="section-link" id="contatoreEsperienze"></span>
+    </div>
+  </div>
+  <div class="filter-bar" id="filterBar">
     <button class="filter-btn active" data-cat="all">Tutte</button>
     <button class="filter-btn" data-cat="cucina">🍳 Cucina</button>
     <button class="filter-btn" data-cat="arte">🎨 Arte</button>
@@ -4398,7 +4432,7 @@
       <div class="footer-col-title">Esplora</div>
       <ul class="footer-links">
         <li><a href="#tutte" data-footer-azione="tutte">Tutte le esperienze</a></li>
-        <li><a href="#destinazioni">Destinazioni</a></li>
+        <li id="footerDestinazioni" hidden><a href="#destinazioni">Destinazioni</a></li>
         <li><a href="#mappa">Mappa</a></li>
         <li><a href="#guide">Le guide</a></li>
       </ul>
@@ -6652,7 +6686,18 @@ function renderInfoRisultati(esito) {
 const PASSO_SCHEDE = 8;
 let limiteSchede = PASSO_SCHEDE;
 
+// Home: "In evidenza". Cercando, filtrando o con "Vedi tutte": l'elenco completo.
+let vistaTutte = false;
+function aggiornaVista() {
+  const risultati = vistaTutte || ricercaAttiva();
+  document.getElementById('tutte').hidden = !risultati;
+  document.getElementById('evidenza').hidden = risultati;
+  document.getElementById('titoloTutte').innerHTML = ricercaAttiva()
+    ? 'Risultati della<br><em>ricerca</em>' : 'Tutte le<br><em>esperienze</em>';
+}
+
 window.renderTutte = function () {
+  aggiornaVista();
   const box = document.getElementById('grigliaTutte');
   const altre = document.getElementById('mostraAltre');
   altre.innerHTML = '';
@@ -6679,7 +6724,7 @@ window.renderTutte = function () {
             ? 'Nessuna esperienza contiene queste parole. Prova con un luogo o con parole diverse.'
           : 'Prova a togliere un filtro.',
         false,
-        '<button class="btn-primary" style="border:none;cursor:pointer;margin-bottom:0.8rem" data-togli="tutto">Mostra tutte</button><br>');
+        '<button class="btn-primary" style="border:none;cursor:pointer;margin-bottom:0.8rem" data-vedi-tutte>Mostra tutte</button><br>');
     }
     return;
   }
@@ -6724,8 +6769,8 @@ function sincronizzaCampi() {
       (t.dataset.dove && normalizza(t.dataset.dove) === normalizza(RICERCA.testo)))));
 }
 
-function vaiAiRisultati() {
-  const sezione = document.getElementById('mappa');
+function vaiAiRisultati(id) {
+  const sezione = document.getElementById(id || 'mappa');
   const nav = document.querySelector('nav');
   const y = sezione.getBoundingClientRect().top + window.scrollY - (nav ? nav.offsetHeight : 0) - 12;
   window.scrollTo({ top: y, behavior: 'smooth' });
@@ -6768,7 +6813,7 @@ async function eseguiRicerca(opzioni = {}) {
 
   sincronizzaCampi();
   window.renderTutte();
-  if (opzioni.scorri) vaiAiRisultati();
+  if (opzioni.scorri) vaiAiRisultati(opzioni.verso);
   if (!RICERCA.inAttesa) return;
 
   let geo = null;
@@ -6811,7 +6856,8 @@ function azzeraRicerca(chiave) {
   if (chiave === 'persone' || chiave === 'tutto') RICERCA.persone = 0;
   if (chiave === 'data' || chiave === 'tutto')    RICERCA.data = '';
   if (chiave === 'guida' || chiave === 'tutto')   RICERCA.guida = null;
-  eseguiRicerca();
+  // Tolto l'ultimo filtro si torna alla home: la pagina si accorcia, si riparte dalla mappa
+  eseguiRicerca({ scorri: !vistaTutte && !ricercaAttiva() });
 }
 
 document.getElementById('btnCerca').addEventListener('click', leggiCampiECerca);
@@ -6879,11 +6925,76 @@ document.getElementById('grigliaDestinazioni').addEventListener('click', e => {
   eseguiRicerca({ scorri: true });
 });
 
-// Nessun filtro: tutte le esperienze
-function mostraTutte() {
+// Nessun filtro: tutte le esperienze (vista elenco completo)
+function svuotaRicerca() {
   RICERCA.testo = ''; RICERCA.luogo = null; RICERCA.cat = 'all'; RICERCA.persone = 0; RICERCA.data = '';
   RICERCA.guida = null;
+  if (campoDove) campoDove.value = '';
+}
+function mostraTutte() {
+  svuotaRicerca();
+  vistaTutte = true;
+  eseguiRicerca({ scorri: true, verso: 'tutte' });
+}
+function tornaHome() {
+  svuotaRicerca();
+  vistaTutte = false;
   eseguiRicerca({ scorri: true });
+}
+document.getElementById('btnTornaHome').addEventListener('click', tornaHome);
+document.getElementById('btnVediTutte').addEventListener('click', mostraTutte);
+document.getElementById('linkVediTutte').addEventListener('click', e => { e.preventDefault(); mostraTutte(); });
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-vedi-tutte]')) { e.preventDefault(); mostraTutte(); }
+});
+
+/* ---------- In evidenza: scelta automatica ----------
+   1. prima le esperienze con una data libera a breve (14 giorni, poi 60, poi le altre)
+   2. al massimo una per guida (se ne mancano, si riempie con le altre)
+   3. un po' di rotazione: a ogni visita l'ordine dentro ogni gruppo cambia */
+const N_EVIDENZA = 6;
+const semeEvidenza = Math.floor(Math.random() * 1e9);
+function casualeDa(testo) {           // numero fisso per tutta la visita, diverso a ogni visita
+  let h = semeEvidenza;
+  for (const c of String(testo)) h = Math.imul(h ^ c.charCodeAt(0), 2654435761) >>> 0;
+  return (h % 100000) / 100000;
+}
+function renderEvidenza() {
+  const box = document.getElementById('grigliaEvidenza');
+  const btn = document.getElementById('btnVediTutte');
+  const link = document.getElementById('linkVediTutte');
+  const voci = Object.entries(CATALOGO);
+  if (!voci.length) {
+    box.innerHTML = statoVuoto('🧭', 'Ancora nessuna esperienza',
+      'Questo spazio aspetta la prima guida. Se conosci la tua città, tocca a te.', true);
+    btn.hidden = true; link.hidden = true;
+    return;
+  }
+  const oggi = new Date(oggiISO() + 'T12:00').getTime();
+  const fascia = e => {
+    const p = prossimeDate(e, 1)[0];
+    if (!p) return 3;
+    const giorni = (new Date(p + 'T12:00').getTime() - oggi) / 864e5;
+    return giorni <= 14 ? 0 : giorni <= 60 ? 1 : 2;
+  };
+  const ordinate = voci
+    .map(v => [v, fascia(v[1]) + casualeDa(v[0])])
+    .sort((a, b) => a[1] - b[1])
+    .map(x => x[0]);
+  const scelte = [], guide = new Set();
+  for (const v of ordinate) {
+    if (scelte.length >= N_EVIDENZA) break;
+    if (!guide.has(v[1].autoreUid)) { scelte.push(v); guide.add(v[1].autoreUid); }
+  }
+  for (const v of ordinate) {
+    if (scelte.length >= N_EVIDENZA) break;
+    if (!scelte.includes(v)) scelte.push(v);
+  }
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  box.innerHTML = scelte.map(([id, e]) => cardTrending(id, e, uid && e.autoreUid === uid)).join('');
+  const altre = voci.length > scelte.length;
+  btn.hidden = !altre; link.hidden = !altre;
+  btn.textContent = `Vedi tutte le ${voci.length} esperienze →`;
 }
 
 // Suggerimenti sotto la barra: nati dai dati veri, non da una lista inventata
@@ -6978,8 +7089,10 @@ function renderDestinazioni() {
     .slice(0, 5);
   const mostra = citta.length >= 2;
   sez.hidden = !mostra;
-  const voceFooter = document.getElementById('footerDestinazioni');
-  if (voceFooter) voceFooter.hidden = !mostra;
+  ['footerDestinazioni', 'navDestinazioni'].forEach(id => {
+    const voce = document.getElementById(id);
+    if (voce) voce.hidden = !mostra;
+  });
   if (!mostra) { box.innerHTML = ''; return; }
   box.className = 'dest-grid reveal visible n' + citta.length;
   box.innerHTML = citta.map(c => `
@@ -6994,6 +7107,7 @@ function renderDestinazioni() {
 }
 
 function renderTutto() {
+  renderEvidenza();
   window.renderTutte();
   renderGuide();
   renderConteggi();
