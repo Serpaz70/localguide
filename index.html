@@ -1558,6 +1558,16 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
 
+  /* Si clicca solo sul pin disegnato, non sul riquadro vuoto intorno:
+     con i pin vicini il riquadro di uno copriva l'altro */
+  .leaflet-marker-icon.leaflet-interactive.lg-pin { pointer-events: none; }
+  .lg-pin .lg-marker-inner, .lg-pin .lg-marker-price { pointer-events: auto; }
+  .lg-marker { height: 100%; justify-content: flex-end; }
+  /* Da lontano: pin piccoli, senza prezzo */
+  .mappa-lontana .lg-marker-inner { width: 24px; height: 24px; border-width: 2px; }
+  .mappa-lontana .lg-marker-emoji { font-size: 0.62rem; }
+  .mappa-lontana .lg-marker-price { display: none; }
+
   .lg-marker-active .lg-marker-inner {
     background: #C4602A;
     border-color: #C4602A;
@@ -2737,7 +2747,7 @@
       border-bottom: 1px solid var(--sand);
       max-height: 260px;
     }
-    .map-area { height: 360px; }
+    .map-area { height: 420px; }   /* abbastanza alta da mostrare l'Italia a zoom 5 */
     .lg-popup-img { height: 96px; }
 
     /* Modal dettaglio esperienza */
@@ -7956,7 +7966,10 @@ function contenitorePin(leafletMap) {
   if (leafletMap.getZoom() < leafletMap.getMinZoom()) leafletMap.setZoom(leafletMap.getMinZoom(), { animate: false });
   if (gruppoPin || typeof L.markerClusterGroup !== 'function') return gruppoPin || leafletMap;
   gruppoPin = L.markerClusterGroup({
-    maxClusterRadius: 45,
+    // Raggio (in pixel) entro cui i pin si uniscono. Con l'Italia intera
+    // 45 px sono 150 km: Roma, Bologna e Porto Santo Stefano finivano insieme.
+    // Da lontano i pin diventano piccoli e si uniscono solo se quasi sovrapposti.
+    maxClusterRadius: z => z <= 5 ? 18 : z <= 6 ? 22 : z <= 8 ? 30 : 45,
     showCoverageOnHover: false,
     // Di serie i pin fuori dal riquadro visibile vengono tolti dalla mappa.
     // Sul telefono, quando il riquadro di un pin si apre, la mappa scorre per
@@ -7966,7 +7979,7 @@ function contenitorePin(leafletMap) {
     spiderfyOnMaxZoom: true,
     iconCreateFunction: c => {
       const n = c.getChildCount();
-      const lato = n < 10 ? 44 : n < 50 ? 52 : 60;
+      const lato = n < 10 ? 36 : n < 50 ? 44 : 52;
       return L.divIcon({
         html: `<div class="lg-cluster" style="width:${lato}px;height:${lato}px"><span>${n}</span></div>`,
         className: 'lg-cluster-wrap',
@@ -7975,6 +7988,10 @@ function contenitorePin(leafletMap) {
     }
   });
   leafletMap.addLayer(gruppoPin);
+  // Pin piccoli quando si guarda da lontano (Italia o regione intera)
+  const scala = () => leafletMap.getContainer().classList.toggle('mappa-lontana', leafletMap.getZoom() <= 7);
+  leafletMap.on('zoomend', scala);
+  scala();
   return gruppoPin;
 }
 
@@ -8026,7 +8043,7 @@ function aggiornaMappa(vociFiltrate) {
                <div class="lg-marker-inner"><span class="lg-marker-emoji">📍</span></div>
                <div class="lg-marker-price">€${esc2(v.e.prezzo)}</div>
              </div>`,
-      className: '', iconSize: [54, 62], iconAnchor: [27, 62], popupAnchor: [0, -66]
+      className: 'lg-pin', iconSize: [54, 62], iconAnchor: [27, 62], popupAnchor: [0, -66]
     });
     const m = L.marker(v.c, { icon: icona });
     contenitorePin(leafletMap).addLayer(m);
