@@ -3,14 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LocalGuide — Esperienze autentiche con guide locali</title>
+<title>Foroo — Esperienze autentiche con guide locali</title>
 <meta name="description" content="Scopri esperienze locali autentiche: cucina, arte, avventura e tour guidati da persone del posto. Non i soliti tour turistici.">
 <meta name="theme-color" content="#C4602A">
+<meta name="application-name" content="Foroo">
+<meta name="apple-mobile-web-app-title" content="Foroo">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23C4602A'/%3E%3Cpath d='M50 20c-11 0-20 9-20 20 0 15 20 40 20 40s20-25 20-40c0-11-9-20-20-20zm0 27a7 7 0 110-14 7 7 0 010 14z' fill='%23fff'/%3E%3C/svg%3E">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="LocalGuide — Esperienze autentiche con guide locali">
+<meta property="og:site_name" content="Foroo">
+<meta property="og:title" content="Foroo — Esperienze autentiche con guide locali">
 <meta property="og:description" content="Viaggia con chi la città la conosce davvero. Esperienze uniche guidate da persone del posto.">
 <meta property="og:image" content="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&q=80">
 <meta property="og:locale" content="it_IT">
@@ -3863,7 +3866,7 @@
 
 <!-- NAV -->
 <nav>
-  <a href="#" class="logo">Local<span>Guide</span></a>
+  <a href="#" class="logo">For<span>oo</span></a>
   <button class="burger" id="burger" aria-label="Apri menu" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
@@ -4124,7 +4127,7 @@
   <div class="become-guide-content reveal">
     <div class="become-guide-eyebrow">Per le guide locali</div>
     <h2 class="become-guide-title">Trasforma la tua<br>passione in<br><em>guadagno</em></h2>
-    <p class="become-guide-desc">Sei del posto? Conosci angoli nascosti, ricette di famiglia, storie dimenticate? Diventa guida LocalGuide e condividi quello che ami, guadagnando in modo flessibile.</p>
+    <p class="become-guide-desc">Sei del posto? Conosci angoli nascosti, ricette di famiglia, storie dimenticate? Diventa guida Foroo e condividi quello che ami, guadagnando in modo flessibile.</p>
     <a href="#" class="btn-white" onclick="apriPubblica(); return false;">Pubblica la tua esperienza</a>
   </div>
   <div class="become-guide-perks reveal">
@@ -4272,7 +4275,7 @@
   <div class="app-content reveal">
     <div class="app-eyebrow">Dal telefono</div>
     <h2 class="app-title">Porta le esperienze<br><em>sempre con te</em></h2>
-    <p class="app-desc">LocalGuide funziona dal browser del telefono: non c'è niente da scaricare. Aggiungilo alla schermata Home e lo apri con un tocco, come un'app.</p>
+    <p class="app-desc">Foroo funziona dal browser del telefono: non c'è niente da scaricare. Aggiungilo alla schermata Home e lo apri con un tocco, come un'app.</p>
     <!-- Istruzioni, non pulsanti: su iPhone non esiste un tasto "installa" -->
     <div class="app-istruzioni">
       <div class="app-istruzioni-titolo">Come aggiungerlo alla schermata Home</div>
@@ -4353,7 +4356,7 @@
 <footer>
   <div class="footer-top">
     <div class="footer-brand">
-      <a href="#" class="footer-logo">Local<span>Guide</span></a>
+      <a href="#" class="footer-logo">For<span>oo</span></a>
       <p class="footer-tagline">Connettere viaggiatori autentici con persone del posto che amano condividere la loro cultura, la loro cucina, la loro città.</p>
     </div>
     <div>
@@ -4385,7 +4388,7 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2026 LocalGuide</span>
+    <span>© 2026 Foroo</span>
   </div>
 </footer>
 
@@ -5325,7 +5328,7 @@
   // ===== LEAFLET MAP =====
   let leafletMap = null;
 
-  // LocalGuide è solo per l'Italia: riquadro che la contiene tutta (isole comprese)
+  // Foroo è solo per l'Italia: riquadro che la contiene tutta (isole comprese)
   const ITALIA = [[35.4, 6.6], [47.1, 18.6]];
   const inItalia = (lat, lng) => lat >= 35.2 && lat <= 47.2 && lng >= 6.5 && lng <= 18.7;
 
@@ -6359,7 +6362,7 @@ async function caricaEsperienze() {
         lingue: testo(v.lingue, 40) || 'IT',
         eta: 'Tutte le età',
         guida: testo(v.autoreNome, 60) || 'Guida',
-        guidaSub: 'Guida su LocalGuide',
+        guidaSub: 'Guida su Foroo',
         guidaFoto: urlSicura(v.autoreFoto, true) || avatarIniziali(testo(v.autoreNome, 60), ''),
         autoreUid: testo(v.autoreUid, 128),
         lat: numero(v.lat, -90, 90), lng: numero(v.lng, -180, 180),
@@ -6816,7 +6819,7 @@ document.getElementById('btnVicino').addEventListener('click', () => {
     const { latitude: lat, longitude: lng } = pos.coords;
     if (!inItalia(lat, lng)) {
       ripristina();
-      toast('Sembri fuori dall\'Italia: LocalGuide propone esperienze solo in Italia.');
+      toast('Sembri fuori dall\'Italia: Foroo propone esperienze solo in Italia.');
       return;
     }
     if (window.segnaPosizione) window.segnaPosizione(lat, lng);
@@ -7483,7 +7486,7 @@ document.getElementById('btnPubblica').addEventListener('click', async () => {
 
   setLoading(btn, false);
   if (!geo || !inItalia(geo.lat, geo.lng)) {
-    return avvisoPub(`Non trovo «${citta}» in Italia. Scrivi il nome del paese o della città e scegli dalla lista che compare: LocalGuide è solo per esperienze in Italia.`);
+    return avvisoPub(`Non trovo «${citta}» in Italia. Scrivi il nome del paese o della città e scegli dalla lista che compare: Foroo è solo per esperienze in Italia.`);
   }
   setLoading(btn, true, inModifica ? 'Salvo le modifiche...' : 'Pubblicazione...');
   const primo = fotoScelte[0];
